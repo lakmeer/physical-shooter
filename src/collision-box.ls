@@ -1,4 +1,6 @@
 
+{ test } = require \test
+
 #
 # Collision Box
 #
@@ -24,4 +26,25 @@ export class CollisionBox
     @colliding =
       ( left  <  @left  <= right or right >= @right >  left ) and
       (bottom < @bottom <=  top  or  top  >=  @top  > bottom)
+
+#
+# Tests
+#
+
+test "CollisionBox - intersection", ->
+
+  a = new CollisionBox 0,  0, 10, 10
+  b = new CollisionBox 0, 20, 10, 10
+
+  @equal "Does not intersect when clearly apart Y"
+  .expect a.intersects b
+  .to-be false
+
+  b.move-to [ 20, 0 ]
+
+  @equal "Does not intersect when clearly apart X"
+  .expect a.intersects b
+  .to-be false
+
+
 

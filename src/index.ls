@@ -1,7 +1,7 @@
 
 # Require
 
-{ id, log } = require \std
+{ id, log, floor } = require \std
 
 { FrameDriver } = require \./frame-driver
 { Blitter }     = require \./blitter
@@ -17,9 +17,7 @@ main-canvas = new Blitter
 main-canvas.install document.body
 
 player = new Player
-#enemy  = new Enemy
-
-tester = new CollisionBox 0, 0, 10, 10
+enemy  = new Enemy
 
 
 # Listen
@@ -35,23 +33,35 @@ document.add-event-listener \mousemove, ({ pageX, pageY }) ->
 
 # Init
 
+{ time-factor } = require \config
+
+last-shot-time = 0
+
 frame-driver = new FrameDriver (Δt, time, frames) ->
+
+  Δt   *= time-factor
+  time *= time-factor
+
   main-canvas.clear!
   main-canvas.show-grid!
 
-  #enemy.update Δt, time
-  #enemy.draw main-canvas
+  enemy.update Δt, time
+  enemy.draw main-canvas
 
-  #player.update Δt, time
-  player.move-to [ 0, -25 ]
+  player.update Δt, time
+  #player.move-to [ 0, -25 ]
   player.draw main-canvas
 
-  tester.move-to [ 20 * Math.sin(time/700), 20 * Math.cos(time/700) ]
-  #tester.move-to [0 0]
-  tester.intersects player.box
-  tester.draw main-canvas
+  for bullet in player.bullets
+    if bullet.box.intersects enemy.box
+      bullet.state.hit = true
+      enemy.state.health -= 2
 
-  #if time/10 % 25 > 20 then player.shoot!
+  new-shot-time = floor time*20
+
+  if new-shot-time > last-shot-time
+    player.shoot!
+    last-shot-time := new-shot-time
 
 frame-driver.start!
 

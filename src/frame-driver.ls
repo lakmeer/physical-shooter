@@ -36,7 +36,7 @@ export class FrameDriver
     @state.time  = now
     @state.frame = @state.frame + 1
     @state.Δt    = Δt
-    @on-frame Δt, @state.time, @state.frame, @fps
+    @on-frame Δt/1000, @state.time/1000, @state.frame, @fps
 
   start: ->
     if @state.running is yes then return

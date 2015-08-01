@@ -1,5 +1,5 @@
 
-{ id, log, box, v2 } = require \std
+{ id, log, box, floor, v2 } = require \std
 
 { CollisionBox } = require \./collision-box
 
@@ -13,9 +13,12 @@
 export class Enemy
   ->
     @pos = [0 0]
-    @bullets = []
     @box = new CollisionBox ...@pos, 10, 10
-    @state = alive: yes
+    @bullets = []
+    @state =
+      alive: yes
+      health: 100
+      max-hp: 100
 
   update: (Δt, time) ->
     @pos.0 = 50 * Math.sin time/1000
@@ -27,12 +30,11 @@ export class Enemy
 
   draw: (ctx) ->
     @bullets.map (.draw ctx)
-    ctx.set-color \red
-    ctx.rect (@pos), box 80
+    ctx.set-color "hsl(#{floor 120*@state.health/@state.max-hp},100%,50%)"
+    ctx.rect @pos `v2.add` [-5,5], box 10
     @box.draw ctx
 
   shoot: ->
     @bullets.push new Bullet [ @pos.0 - 0.04, @pos.1 ]
     @bullets.push new Bullet [ @pos.0 + 0.04, @pos.1 ]
-
 
