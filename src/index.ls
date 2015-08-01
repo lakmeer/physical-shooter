@@ -19,7 +19,7 @@ main-canvas.install document.body
 player = new Player
 #enemy  = new Enemy
 
-tester = new CollisionBox 0, 0.5, 0.03, 0.03
+tester = new CollisionBox 0, 0, 10, 10
 
 
 # Listen
@@ -39,24 +39,20 @@ document.add-event-listener \mousemove, ({ pageX, pageY }) ->
 
 frame-driver = new FrameDriver (Δt, time, frames) ->
   main-canvas.clear!
+  main-canvas.show-grid!
+
   #enemy.update Δt, time
   #enemy.draw main-canvas
-  #player.update Δt, time
-  #player.draw main-canvas
 
-  #tester.move-to [ (10 * Math.sin time/500), 10 + 5 * Math.cos time/500 ]
+  #player.update Δt, time
+  player.move-to [ 0, -25 ]
+  player.draw main-canvas
+
+  #tester.move-to [ 20 * Math.sin(time/1000), 20 * Math.cos(time/1000) ]
   tester.intersects player.box
-  #tester.draw main-canvas
+  tester.draw main-canvas
 
   #if time/10 % 25 > 20 then player.shoot!
-
-  x = 30 * Math.sin time/500
-  y = 30 * Math.cos time/500
-
-  main-canvas.rect [ x, y ], [ 10, 10 ]
-
-
-
 
 frame-driver.start!
 

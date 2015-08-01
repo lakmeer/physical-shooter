@@ -20,6 +20,9 @@ export class Ship
     @bullets := @bullets.filter (.update Δt)
     @box.move-to @pos
 
+  move-to: (@pos) ->
+    @box.move-to @pos
+
   draw: (ctx) ->
     @bullets.map (.draw ctx)
     ctx.set-color \red

@@ -24,6 +24,7 @@ export class Blitter
 
   clear: ->
     @ctx.fill-style = \white
+    @ctx.stroke-style = \white
     @ctx.clear-rect 0, 0, @size.0, @size.1
 
   set-color: (col) ->
@@ -39,32 +40,39 @@ export class Blitter
 
   stroke-rect: (pos, size) ->
     [ x1, y1 ] = @game-space-to-screen-space pos
-    [ w, h ] = @game-space-to-screen-space size
-    x2 = x1 + w
-    y2 = y1 + h
+    [  w, h  ] = @game-size-to-screen-size size
+    [ x2, y2 ] = [ x1 + w, y1 + h ]
     @ctx.begin-path!
     @ctx.move-to x1 + 0.5, y1 + 0.5
     @ctx.line-to x2 - 0.5, y1 + 0.5
     @ctx.line-to x2 - 0.5, y2 - 0.5
     @ctx.line-to x1 + 0.5, y2 - 0.5
     @ctx.line-to x1 + 0.5, y1 + 0.5
-    @ctx.stroke!
     @ctx.close-path!
+    @ctx.stroke!
 
   line: (x1, y1, x2, y2) ->
-    @ctx.stroke-style = \white
-    @ctx.move-to @size.0/2 + x1 * @size.0/2, @size.1 - y1 * @size.1
-    @ctx.line-to @size.0/2 + x2 * @size.0/2, @size.1 - y2 * @size.1
+    [ x1, y1 ] = @game-space-to-screen-space [ x1, y1 ]
+    [ x2, y2 ] = @game-space-to-screen-space [ x2, y2 ]
+    @ctx.begin-path!
+    @ctx.move-to x1 + 0.5, y1 + 0.5
+    @ctx.line-to x2 + 0.5, y2 + 0.5
+    @ctx.close-path!
     @ctx.stroke!
+
+  show-grid: ->
+    @set-line-color \grey
+    @line 0, 100, 0, -100
+    @line 100, 0, -100, 0
 
   install: (host) ->
     host.append-child @canvas
 
   game-size-to-screen-size: ([ w, h ]) ->
-    [ w * @size.0/bs, h * @size.1/bs ]
+    [ w * 0.5 * @size.0/bs, h * 0.5 * @size.1/bs ]
 
   screen-size-to-game-size: ([ w, h ]) ->
-    [ w * bs/@size.0, h * bs/@size.1 ]
+    [ w * 2 * bs/@size.0, h * 2 * bs/@size.1 ]
 
   game-space-to-screen-space: ([ x, y ]) ->
     [ @size.0/2 + @size.0/2 * x/bs, @size.1/2 - @size.1/2 * y/bs ]

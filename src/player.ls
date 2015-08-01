@@ -15,6 +15,6 @@ export class Player extends Ship
   ->
     super ...
 
-    @pos = [0 0.08]
-    @box = new CollisionBox ...@pos, 0.08, 0.08
+    @pos = [0 0]
+    @box = new CollisionBox ...@pos, 10, 10
 
