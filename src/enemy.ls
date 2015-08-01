@@ -1,7 +1,6 @@
 
 { id, log, box, v2 } = require \std
 
-{ Ship } = require \./ship
 { CollisionBox } = require \./collision-box
 
 #
@@ -11,22 +10,29 @@
 # Idea: injected controller class - cpu vs human
 #
 
-export class Enemy extends Ship
+export class Enemy
   ->
-    super ...
-    @pos = [0, 0.92]
-
-    @state =
-      alive: yes
-
-    @box = new CollisionBox ...@pos, 0.08, 0.08
+    @pos = [0 0]
+    @bullets = []
+    @box = new CollisionBox ...@pos, 10, 10
+    @state = alive: yes
 
   update: (Δt, time) ->
-    @pos.0 = 0.5 * Math.cos time/1000
+    @pos.0 = 50 * Math.sin time/1000
+    @bullets := @bullets.filter (.update Δt)
     @box.move-to @pos
 
-  draw: ->
-    it.set-color \#1d2
-    it.rect (@pos `v2.add` [-0.08 0.04]), box 0.08
-    @box.draw it
+  move-to: (@pos) ->
+    @box.move-to @pos
+
+  draw: (ctx) ->
+    @bullets.map (.draw ctx)
+    ctx.set-color \red
+    ctx.rect (@pos), box 80
+    @box.draw ctx
+
+  shoot: ->
+    @bullets.push new Bullet [ @pos.0 - 0.04, @pos.1 ]
+    @bullets.push new Bullet [ @pos.0 + 0.04, @pos.1 ]
+
 

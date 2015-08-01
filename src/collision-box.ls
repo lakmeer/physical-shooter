@@ -22,6 +22,6 @@ export class CollisionBox
 
   intersects: ({ left, right, top, bottom }) ->
     @colliding =
-      ((@left > left and @left < right) or (@right < right and @right > left)) and
-      ((@bottom > bottom and @bottom < top) or (@top < top and @top > bottom))
+      ( left  <  @left  <= right or right >= @right >  left ) and
+      (bottom < @bottom <=  top  or  top  >=  @top  > bottom)
 

@@ -33,8 +33,6 @@ document.add-event-listener \mousemove, ({ pageX, pageY }) ->
   tester.move-to main-canvas.screen-space-to-game-space [ pageX, pageY ]
 
 
-
-
 # Init
 
 frame-driver = new FrameDriver (Δt, time, frames) ->
@@ -48,7 +46,8 @@ frame-driver = new FrameDriver (Δt, time, frames) ->
   player.move-to [ 0, -25 ]
   player.draw main-canvas
 
-  #tester.move-to [ 20 * Math.sin(time/1000), 20 * Math.cos(time/1000) ]
+  tester.move-to [ 20 * Math.sin(time/700), 20 * Math.cos(time/700) ]
+  #tester.move-to [0 0]
   tester.intersects player.box
   tester.draw main-canvas
 
