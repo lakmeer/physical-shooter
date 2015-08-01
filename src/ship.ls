@@ -16,7 +16,7 @@ export class Ship
     @bullets = []
 
   update: (Δt, time) ->
-    @pos.0 = 0.5 * Math.sin time/1000
+    @pos.0 = 50 * Math.sin time/1000
     @bullets := @bullets.filter (.update Δt)
     @box.move-to @pos
 

@@ -1,5 +1,5 @@
 
-{ id, log } = require \std
+{ id, log, floor } = require \std
 { test } = require \test
 
 
@@ -11,7 +11,9 @@
 
 export class Blitter
 
-  screen-size  = 600
+  { screen-size, board-size } = require \config
+
+  bs = board-size
 
   (@size = [ screen-size, screen-size ]) ->
     @canvas = document.create-element \canvas
@@ -27,17 +29,19 @@ export class Blitter
   set-color: (col) ->
     @ctx.fill-style = col
 
+  set-line-color: (col) ->
+    @ctx.stroke-style = col
+
   rect: (pos, size) ->
     [ x, y ] = @game-space-to-screen-space pos
-    [ w, h ] = @game-space-to-screen-space size
-    @ctx.fill-rect @size.0/2 + x * @size.0/2, @size.1 - y * @size.1, w * @size.0, h * @size.1
+    [ w, h ] = @game-size-to-screen-size size
+    @ctx.fill-rect x, y, w, h
 
-  stroke-rect: ([ x, y ], [ w, h ]) ->
-    x1 = @size.0/2 + x * @size.0/2
-    y1 = @size.1 - y * @size.1
-    x2 = x1 + w * @size.0
-    y2 = y1 + h * @size.1
-    @ctx.stroke-style = \white
+  stroke-rect: (pos, size) ->
+    [ x1, y1 ] = @game-space-to-screen-space pos
+    [ w, h ] = @game-space-to-screen-space size
+    x2 = x1 + w
+    y2 = y1 + h
     @ctx.begin-path!
     @ctx.move-to x1 + 0.5, y1 + 0.5
     @ctx.line-to x2 - 0.5, y1 + 0.5
@@ -56,71 +60,66 @@ export class Blitter
   install: (host) ->
     host.append-child @canvas
 
-  screen-space-to-game-space: ([ screen-x, screen-y ]) ->
-    game-x = screen-x/(@size.0/2) - 1
-    game-y = 1 - screen-y/@size.0
-    return [ game-x, game-y ]
+  game-size-to-screen-size: ([ w, h ]) ->
+    [ w * @size.0/bs, h * @size.1/bs ]
+
+  screen-size-to-game-size: ([ w, h ]) ->
+    [ w * bs/@size.0, h * bs/@size.1 ]
 
   game-space-to-screen-space: ([ x, y ]) ->
-    [ @size.0/2 + x * @size.0/2, @size.1 - y * @size.1 ]
+    [ @size.0/2 + @size.0/2 * x/bs, @size.1/2 - @size.1/2 * y/bs ]
 
+  screen-space-to-game-space: ([ x, y ]) ->
+    [ x * bs * 2/@size.0 - bs, bs - y * bs * 2/@size.1 ]
 
 #
 # Tests
 #
 
-test "Blitter - Screen space to game space", ->
-  blitter = new Blitter [ 100, 100 ]
-
-  @equal-v2 'Origin is at bottom center'
-    .expect blitter.game-space-to-screen-space [ 0, 0 ]
-    .to-be  [ 50, 100 ]
-
-  @equal-v2 'Y=1 is at top center'
-    .expect blitter.game-space-to-screen-space [ 0, 1 ]
-    .to-be  [ 50, 0 ]
-
-  @equal-v2 'min X min Y is bottom left'
-    .expect blitter.game-space-to-screen-space [ -1, 0 ]
-    .to-be  [ 0, 100 ]
-
-  @equal-v2 'max X min Y is bottom right'
-    .expect blitter.game-space-to-screen-space [ 1, 0 ]
-    .to-be  [ 100, 100 ]
-
-  @equal-v2 'min X max Y is top left'
-    .expect blitter.game-space-to-screen-space [ -1, 1 ]
-    .to-be  [ 0, 0 ]
-
-  @equal-v2 'max X max Y is top right'
-    .expect blitter.game-space-to-screen-space [ 1, 1 ]
-    .to-be  [ 100, 0 ]
-
-
 test "Blitter - Game space to screen space", ->
   blitter = new Blitter [ 100, 100 ]
 
-  @equal-v2 'Origin is at bottom center'
-    .expect blitter.screen-space-to-game-space [ 50, 100 ]
-    .to-be [ 0, 0 ]
+  @equal-v2 'Origin is in the center'
+    .expect blitter.game-space-to-screen-space [ 0, 0 ]
+    .to-be  [ 50, 50 ]
 
-  @equal-v2 'Y=1 is at top center'
-    .expect blitter.screen-space-to-game-space [ 50, 0 ]
-    .to-be [ 0, 1 ]
+  @equal-v2 'min X min Y is bottom left'
+    .expect blitter.game-space-to-screen-space [ -100, -100 ]
+    .to-be  [ 0, 100 ]
+
+  @equal-v2 'min X max Y is top left'
+    .expect blitter.game-space-to-screen-space [ -100, 100 ]
+    .to-be  [ 0, 0 ]
+
+  @equal-v2 'max X min Y is bottom right'
+    .expect blitter.game-space-to-screen-space [ 100, -100 ]
+    .to-be  [ 100, 100 ]
+
+  @equal-v2 'max X max Y is top right'
+    .expect blitter.game-space-to-screen-space [ 100, 100 ]
+    .to-be  [ 100, 0 ]
+
+
+test "Blitter - Screen space to game space", ->
+  blitter = new Blitter [ 100, 100 ]
+
+  @equal-v2 'Origin is in the center'
+    .expect blitter.screen-space-to-game-space [ 50, 50 ]
+    .to-be [ 0, 0 ]
 
   @equal-v2 'min X min Y is bottom left'
     .expect blitter.screen-space-to-game-space [ 0, 100 ]
-    .to-be [ -1, 0 ]
+    .to-be [ -100, -100 ]
 
   @equal-v2 'max X min Y is bottom right'
     .expect blitter.screen-space-to-game-space [ 100, 100 ]
-    .to-be [ 1, 0 ]
+    .to-be [ 100, -100 ]
 
   @equal-v2 'min X max Y is top left'
     .expect blitter.screen-space-to-game-space [ 0, 0 ]
-    .to-be [ -1, 1 ]
+    .to-be [ -100, 100 ]
 
   @equal-v2 'max X max Y is top right'
     .expect blitter.screen-space-to-game-space [ 100, 0 ]
-    .to-be [ 1, 1 ]
+    .to-be [ 100, 100 ]
 

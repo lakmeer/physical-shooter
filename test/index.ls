@@ -37,7 +37,8 @@ report = (name, { passed, total }, results) ->
 
   for result in results
     if result.pass
-      green-log result.text
+      if passed is total
+        green-log result.text
     else
       red-log result.text, \expected result.e, \got result.a
 
