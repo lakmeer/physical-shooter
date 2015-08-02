@@ -34,7 +34,7 @@ document.add-event-listener \mousemove, ({ pageX, pageY }) ->
 
 { time-factor } = require \config
 
-last-shot-time = 0
+last-shot-time = -1
 
 effects = []
 enemies = []
@@ -42,7 +42,7 @@ enemies = []
 player = new Player
 
 
-frame-driver = new FrameDriver (Δt, time, frames) ->
+play-test-frame = (Δt, time, frames) ->
 
   Δt   *= time-factor
   time *= time-factor
@@ -70,7 +70,7 @@ frame-driver = new FrameDriver (Δt, time, frames) ->
       for bullet in player.bullets
         if bullet.box.intersects enemy.box
           bullet.state.hit = true
-          enemy.state.health -= 2
+          enemy.state.health -= 40
 
           if enemy.state.health <= 0
             enemy.state.alive = no
@@ -87,5 +87,28 @@ frame-driver = new FrameDriver (Δt, time, frames) ->
       player.shoot!
     last-shot-time := new-shot-time
 
+
+
+explosion-test-frame = (Δt, time, frames) ->
+  main-canvas.clear!
+  main-canvas.show-grid!
+
+  effects.map (.update Δt, time)
+  effects := effects.filter (.state.alive)
+  effects.map (.draw main-canvas)
+
+  new-shot-time = floor time/2
+
+  if new-shot-time > last-shot-time
+    effects.push new Explosion [ 0, 0 ]
+    last-shot-time := new-shot-time
+
+
+circle-test-frame = (Δt, time, frames) ->
+  main-canvas.clear!
+  main-canvas.circle [0 0], 100
+
+
+frame-driver = new FrameDriver play-test-frame
 frame-driver.start!
 
