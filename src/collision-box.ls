@@ -24,8 +24,8 @@ export class CollisionBox
 
   intersects: ({ left, right, top, bottom }) ->
     @colliding =
-      ( left  <  @left  <= right or right >= @right >  left ) and
-      (bottom < @bottom <=  top  or  top  >=  @top  > bottom)
+      ( left  <=  @left  < right or right >= @right >  left ) and
+      (bottom <= @bottom <  top  or  top  >=  @top  > bottom)
 
 #
 # Tests
@@ -41,10 +41,32 @@ test "CollisionBox - intersection", ->
   .to-be false
 
   b.move-to [ 20, 0 ]
-
   @equal "Does not intersect when clearly apart X"
   .expect a.intersects b
   .to-be false
 
+  b.move-to [ 2, 2 ]
+  @equal "Intersects when clearly overlapping"
+  .expect a.intersects b
+  .to-be true
 
+  b.move-to [ 0, 10 ]
+  @equal "Does not intersect when abutted (top)"
+  .expect a.intersects b
+  .to-be false
+
+  b.move-to [ -10, 0 ]
+  @equal "Does not intersect when abutted (left)"
+  .expect a.intersects b
+  .to-be false
+
+  b.move-to [ 10, 0 ]
+  @equal "Does not intersect when abutted (right)"
+  .expect a.intersects b
+  .to-be false
+
+  b.move-to [ 0, -10 ]
+  @equal "Does not intersect when abutted (bottom)"
+  .expect a.intersects b
+  .to-be false
 
