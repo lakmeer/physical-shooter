@@ -16,6 +16,10 @@ export box = (n) -> [ n, n ]
 
 export rnd = (n) -> n * Math.random!
 
+export pi = Math.PI
+
+export tau = pi * 2
+
 
 # Special logging
 

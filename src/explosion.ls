@@ -8,17 +8,17 @@ physics = (o, Δt) ->
 rvel = (n = 100) -> [ n/2 - (rnd n), n/2 - (rnd n) ]
 
 export class Explosion
-  particle-a-limit = 20
+  particle-a-limit = 10
   particle-b-limit = 10
-  particle-c-limit = 3
+  particle-c-limit = 2
 
   particle-color = [
-    (life) -> "hsl(#{rnd 40}, #{100 - life*100}%, #{100 - life*100}%)"
+    (life) -> "hsl(#{rnd 50}, #{100 - life*100}%, #{100 - life*100}%)"
     (life) -> "hsl(60,        #{100 - life*100}%, #{100 - life*100}%)"
-    (life) -> "hsl(200,       #{100 - life*100}%, #{100 - life*100}%)"
+    (life) -> \white
   ]
 
-  particle-size = [ 10 5 2 ]
+  particle-size = [ 20 5 2 ]
 
   (@pos = [-50, 50]) ->
     @particles = [[] [] []]
@@ -36,13 +36,13 @@ export class Explosion
       life: life
 
     for i from 0 til particle-a-limit
-      @particles.0.push new-particle @pos, 100, 1 + rnd 0.4
+      @particles.0.push new-particle @pos, 50, 1 + rnd 1
 
     for i from 0 til particle-b-limit
-      @particles.1.push new-particle @pos,  20, 1 + rnd 1
+      @particles.1.push new-particle @pos, 100, 1 + rnd 1
 
     for i from 0 til particle-c-limit
-      @particles.1.push new-particle @pos, 500, 0 + rnd 2
+      @particles.1.push new-particle @pos, 1000, 0 + rnd 2
 
   update: (Δt) ->
     for set in @particles
@@ -58,9 +58,9 @@ export class Explosion
       for p in set when p.age < p.life
         size = particle-size[type]
         ctx.ctx.global-alpha = 1 - p.age/p.life
-        ctx.ctx.global-composite-operation = \lighter
+        ctx.ctx.global-composite-operation = \screen
         ctx.set-color particle-color[type] p.age/p.life
-        ctx.rect p.pos `v2.add` [-size/2 size/2], box size
+        ctx.circle p.pos `v2.add` [-size/2 size/2], size
         ctx.ctx.global-alpha = 1
         ctx.ctx.global-composite-operation = \source-over
 

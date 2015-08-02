@@ -1,5 +1,5 @@
 
-{ id, log, floor } = require \std
+{ id, log, tau, floor } = require \std
 { test } = require \test
 
 
@@ -59,6 +59,13 @@ export class Blitter
     @ctx.line-to x2 + 0.5, y2 + 0.5
     @ctx.close-path!
     @ctx.stroke!
+
+  circle: (pos, diam) ->
+    [ x, y ] = @game-space-to-screen-space pos
+    @ctx.begin-path!
+    @ctx.arc x, y, diam/2, 0, tau
+    @ctx.close-path!
+    @ctx.fill!
 
   show-grid: ->
     @set-line-color \grey

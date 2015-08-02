@@ -26,7 +26,8 @@ document.add-event-listener \keydown, ({ which }) ->
   | 27 => frame-driver.toggle!
 
 document.add-event-listener \mousemove, ({ pageX, pageY }) ->
-  #tester.move-to main-canvas.screen-space-to-game-space [ pageX, pageY ]
+  player.move-to main-canvas.screen-space-to-game-space [ pageX, pageY ]
+  player.dont-auto-move!
 
 
 # Init
@@ -40,8 +41,6 @@ enemies = []
 
 player = new Player
 
-for i from 0 til 100
-  enemies.push new Enemy [ -90 + (rnd 180), 90 - rnd 50 ]
 
 frame-driver = new FrameDriver (Δt, time, frames) ->
 
@@ -49,7 +48,7 @@ frame-driver = new FrameDriver (Δt, time, frames) ->
   time *= time-factor
 
   main-canvas.clear!
-  main-canvas.show-grid!
+  #main-canvas.show-grid!
 
   effects.map (.update Δt, time)
   effects.map (.draw main-canvas)
@@ -57,6 +56,10 @@ frame-driver = new FrameDriver (Δt, time, frames) ->
   player.update Δt, time
   #player.move-to [ 0, -25 ]
   player.draw main-canvas
+
+  if enemies.length < 1
+    for i from 0 til 50
+      enemies.push new Enemy [ -90 + (rnd 180), 90 - rnd 90 ]
 
   for enemy in enemies
 
@@ -76,7 +79,7 @@ frame-driver = new FrameDriver (Δt, time, frames) ->
   enemies := enemies.filter (.state.alive)
   effects := effects.filter (.state.alive)
 
-  new-shot-time = floor time*40
+  new-shot-time = floor time*10
 
   if new-shot-time > last-shot-time
     to-fire = new-shot-time - last-shot-time
