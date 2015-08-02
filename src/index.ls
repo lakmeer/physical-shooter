@@ -1,7 +1,7 @@
 
 # Require
 
-{ id, log, floor } = require \std
+{ id, log, rnd, floor } = require \std
 
 { FrameDriver } = require \./frame-driver
 { Blitter }     = require \./blitter
@@ -9,15 +9,13 @@
 { Enemy }       = require \./enemy
 
 { CollisionBox } = require \./collision-box
+{ Explosion } = require \./explosion
 
 
 # Setup
 
 main-canvas = new Blitter
 main-canvas.install document.body
-
-player = new Player
-enemy  = new Enemy
 
 
 # Listen
@@ -28,7 +26,7 @@ document.add-event-listener \keydown, ({ which }) ->
   | 27 => frame-driver.toggle!
 
 document.add-event-listener \mousemove, ({ pageX, pageY }) ->
-  tester.move-to main-canvas.screen-space-to-game-space [ pageX, pageY ]
+  #tester.move-to main-canvas.screen-space-to-game-space [ pageX, pageY ]
 
 
 # Init
@@ -36,6 +34,14 @@ document.add-event-listener \mousemove, ({ pageX, pageY }) ->
 { time-factor } = require \config
 
 last-shot-time = 0
+
+effects = []
+enemies = []
+
+player = new Player
+
+for i from 0 til 100
+  enemies.push new Enemy [ -90 + (rnd 180), 90 - rnd 50 ]
 
 frame-driver = new FrameDriver (Δt, time, frames) ->
 
@@ -45,22 +51,37 @@ frame-driver = new FrameDriver (Δt, time, frames) ->
   main-canvas.clear!
   main-canvas.show-grid!
 
-  enemy.update Δt, time
-  enemy.draw main-canvas
+  effects.map (.update Δt, time)
+  effects.map (.draw main-canvas)
 
   player.update Δt, time
   #player.move-to [ 0, -25 ]
   player.draw main-canvas
 
-  for bullet in player.bullets
-    if bullet.box.intersects enemy.box
-      bullet.state.hit = true
-      enemy.state.health -= 2
+  for enemy in enemies
 
-  new-shot-time = floor time*20
+    if enemy.state.alive
+      enemy.update Δt, time
+      enemy.draw main-canvas
+
+      for bullet in player.bullets
+        if bullet.box.intersects enemy.box
+          bullet.state.hit = true
+          enemy.state.health -= 2
+
+          if enemy.state.health <= 0
+            enemy.state.alive = no
+            effects.push new Explosion enemy.pos
+
+  enemies := enemies.filter (.state.alive)
+  effects := effects.filter (.state.alive)
+
+  new-shot-time = floor time*40
 
   if new-shot-time > last-shot-time
-    player.shoot!
+    to-fire = new-shot-time - last-shot-time
+    for i from 0 to to-fire
+      player.shoot!
     last-shot-time := new-shot-time
 
 frame-driver.start!

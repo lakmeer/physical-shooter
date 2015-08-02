@@ -14,6 +14,8 @@ export v2 =
 
 export box = (n) -> [ n, n ]
 
+export rnd = (n) -> n * Math.random!
+
 
 # Special logging
 

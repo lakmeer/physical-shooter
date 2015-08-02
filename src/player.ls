@@ -18,7 +18,7 @@ export class Player
     @box = new CollisionBox ...@pos, 10, 10
 
   update: (Δt, time) ->
-    @pos.0 = 5 * Math.sin time*10
+    @pos.0 = 90 * Math.sin time*10
     @bullets = @bullets.filter (.update Δt)
     @box.move-to @pos
 

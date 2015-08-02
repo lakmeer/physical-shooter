@@ -11,17 +11,15 @@
 #
 
 export class Enemy
-  ->
-    @pos = [0 0]
+  (@pos = [0 0]) ->
     @box = new CollisionBox ...@pos, 10, 10
     @bullets = []
     @state =
       alive: yes
-      health: 100
-      max-hp: 100
+      health: 10
+      max-hp: 10
 
   update: (Δt, time) ->
-    @pos.0 = 50 * Math.sin time/1000
     @bullets := @bullets.filter (.update Δt)
     @box.move-to @pos
 
