@@ -9,7 +9,7 @@
 { Enemy }       = require \./enemy
 
 { CollisionBox } = require \./collision-box
-{ Explosion } = require \./explosion
+{ Explosion }    = require \./explosion
 
 
 # Setup
@@ -38,8 +38,7 @@ last-shot-time = -1
 
 effects = []
 enemies = []
-
-player = new Player
+player  = new Player
 
 
 play-test-frame = (Δt, time, frames) ->
@@ -62,7 +61,6 @@ play-test-frame = (Δt, time, frames) ->
       enemies.push new Enemy [ -90 + (rnd 180), 90 - rnd 90 ]
 
   for enemy in enemies
-
     if enemy.state.alive
       enemy.update Δt, time
       enemy.draw main-canvas
@@ -70,7 +68,7 @@ play-test-frame = (Δt, time, frames) ->
       for bullet in player.bullets
         if bullet.box.intersects enemy.box
           bullet.state.hit = true
-          enemy.state.health -= 40
+          enemy.state.health -= 4
 
           if enemy.state.health <= 0
             enemy.state.alive = no
@@ -87,8 +85,6 @@ play-test-frame = (Δt, time, frames) ->
       player.shoot!
     last-shot-time := new-shot-time
 
-
-
 explosion-test-frame = (Δt, time, frames) ->
   main-canvas.clear!
   main-canvas.show-grid!
@@ -102,12 +98,6 @@ explosion-test-frame = (Δt, time, frames) ->
   if new-shot-time > last-shot-time
     effects.push new Explosion [ 0, 0 ]
     last-shot-time := new-shot-time
-
-
-circle-test-frame = (Δt, time, frames) ->
-  main-canvas.clear!
-  main-canvas.circle [0 0], 100
-
 
 frame-driver = new FrameDriver play-test-frame
 frame-driver.start!

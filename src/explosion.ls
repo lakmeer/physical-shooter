@@ -9,46 +9,50 @@ dampen = (o, Δt) ->
   o.vel = (o.vel `v2.scale` (0.96))
   o.pos = (o.vel `v2.scale` Δt) `v2.add` o.pos
 
-
 rvel = (n = 100) -> [ n/2 - (rnd n), n/2 - (rnd n) ]
 
+
 export class Explosion
-  particle-a-limit = 15
-  particle-b-limit = 10
-  particle-c-limit = 2
 
-  particle-color = [
-    (life) -> "hsl(#{rnd 80 - life*80}, #{100 - life*100}%, #{100 - life*100}%)"
-    (life) -> "hsl(60,        #{100 - life*100}%, #{100 - life*100}%)"
-    (life) -> \white
-  ]
+  particle-types =
+    * size: 20
+      life: -> 0.3 + rnd 0.7
+      color: -> "hsl(#{(rnd 80) - it*80}, 50%, 50%)"
+      limit: 15
+      speed: 50
 
-  particle-size = [ 30 5 2 ]
+    * size:  5
+      life: -> 0.7 + rnd 0.3
+      color: -> "hsl(60, #{100 - it*100}%, #{100 - it*100}%)"
+      limit: 10
+      speed: 100
+
+    * size:  3
+      life: -> 0.2 + rnd 0.3
+      color: -> \white
+      limit: 3
+      speed: 1000
+
+  new-particle = (pos, speed, life) ->
+    vel = rvel speed
+    pos: [pos.0, pos.1]
+    vel: vel
+    acc: [0 0]
+    age: 0
+    life: life
 
   (@pos = [-50, 50]) ->
     @particles = [[] [] []]
 
     @state =
-      alive: yes
       age: 0
       life: 2
+      alive: yes
 
-    new-particle = (pos, speed, life) ->
-      vel = rvel speed
-      pos: [pos.0, pos.1]
-      vel: vel
-      acc: [0 0]
-      age: 0
-      life: life
 
-    for i from 0 til particle-a-limit
-      @particles.0.push new-particle @pos, 50, 1 + rnd 1
-
-    for i from 0 til particle-b-limit
-      @particles.1.push new-particle @pos, 100, 1 + rnd 1
-
-    for i from 0 til particle-c-limit
-      @particles.2.push new-particle @pos, 1000, 0 + rnd 2
+    for { speed, life, limit }, i in particle-types
+      for p from 0 til limit
+        @particles[i]push new-particle @pos, speed, life!
 
   update: (Δt) ->
     for set in @particles
@@ -63,11 +67,11 @@ export class Explosion
     ctx.ctx.global-composite-operation = \screen
 
     for set, type in @particles
-      size = particle-size[type]
+      { size, color } = particle-types[type]
 
       for p in set when p.age < p.life
         ctx.ctx.global-alpha = 1 - p.age/p.life
-        ctx.set-color particle-color[type] p.age/p.life
+        ctx.set-color color p.age/p.life
         ctx.circle p.pos, size
 
     ctx.ctx.global-alpha = 1
