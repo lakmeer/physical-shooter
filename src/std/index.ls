@@ -20,6 +20,22 @@ export pi = Math.PI
 
 export tau = pi * 2
 
+export flip = (λ) -> (a, b) -> λ b, a
+
+export delay = flip set-timeout
+
+
+# Physics processors
+
+export physics = (o, Δt) ->
+  f = if o.friction then that else 1
+  o.vel = ((o.acc `v2.scale` Δt) `v2.add` o.vel) `v2.scale` f
+  o.pos = (o.vel `v2.scale` Δt) `v2.add` o.pos `v2.add` (o.acc `v2.scale` (0.5 * Δt * Δt))
+
+export dampen = (o, damp, Δt) ->
+  o.vel = (o.vel `v2.scale` damp)
+  o.pos = (o.vel `v2.scale` Δt) `v2.add` o.pos
+
 
 # Special logging
 

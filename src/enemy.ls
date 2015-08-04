@@ -1,5 +1,5 @@
 
-{ id, log, box, floor, v2 } = require \std
+{ id, log, box, floor, physics, rnd, v2 } = require \std
 
 { CollisionBox } = require \./collision-box
 
@@ -14,21 +14,34 @@ export class Enemy
   (@pos = [0 0]) ->
     @box = new CollisionBox ...@pos, 10, 10
     @bullets = []
-    @state =
-      alive: yes
+
+    @vel = [0 0]
+    @acc = [0 -50 - rnd 50]
+
+    @friction = 0.95
+
+    # Damage component
+    @damage =
       health: 10
       max-hp: 10
+      alive: yes
 
   update: (Δt, time) ->
     @bullets := @bullets.filter (.update Δt)
+    physics this, Δt
+    if @pos.0 >  90 then @pos.0 =  90
+    if @pos.0 < -90 then @pos.0 = -90
+    if @pos.1 >  90 then @pos.1 =  90
+    if @pos.1 < -30 then @pos.1 = -30
     @box.move-to @pos
 
   move-to: (@pos) ->
     @box.move-to @pos
 
   draw: (ctx) ->
+    return if not @damage.alive
     @bullets.map (.draw ctx)
-    ctx.set-color "hsl(#{floor 120*@state.health/@state.max-hp},100%,50%)"
+    ctx.set-color "hsl(#{floor 120*@damage.health/@damage.max-hp},100%,50%)"
     ctx.rect @pos `v2.add` [-5,5], box 10
     @box.draw ctx
 

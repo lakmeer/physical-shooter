@@ -21,6 +21,9 @@ export class Blitter
 
     @canvas.width  = @size.0
     @canvas.height = @size.1
+    @canvas.style.display = \block
+
+    @offset = [0 0]
 
   clear: ->
     @ctx.fill-style = \white
@@ -62,15 +65,16 @@ export class Blitter
 
   circle: (pos, diam) ->
     [ x, y ] = @game-space-to-screen-space pos
+    [ rad ] = @game-size-to-screen-size [ diam/2, 0 ]
     @ctx.begin-path!
-    @ctx.arc x, y, diam/2, 0, tau
+    @ctx.arc x, y, rad, 0, tau
     @ctx.close-path!
     @ctx.fill!
 
   show-grid: ->
     @set-line-color \grey
-    @line 0, 100, 0, -100
-    @line 100, 0, -100, 0
+    @line 0, bs, 0, -bs
+    @line bs, 0, -bs, 0
 
   install: (host) ->
     host.append-child @canvas
@@ -82,10 +86,16 @@ export class Blitter
     [ w * 2 * bs/@size.0, h * 2 * bs/@size.1 ]
 
   game-space-to-screen-space: ([ x, y ]) ->
-    [ @size.0/2 + @size.0/2 * x/bs, @size.1/2 - @size.1/2 * y/bs ]
+    [ @size.0/2 + @size.0/2 * x/bs + @offset.0,
+      @size.1/2 - @size.1/2 * y/bs + @offset.1 ]
 
   screen-space-to-game-space: ([ x, y ]) ->
     [ x * bs * 2/@size.0 - bs, bs - y * bs * 2/@size.1 ]
+
+  set-offset: ([ x, y ]) ->
+    @offset.0 = x
+    @offset.1 = y
+
 
 #
 # Tests

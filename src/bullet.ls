@@ -1,5 +1,5 @@
 
-{ id, log, v2 } = require \std
+{ id, log, floor, v2 } = require \std
 
 { CollisionBox } = require \./collision-box
 
@@ -18,18 +18,29 @@ export class Bullet
     @state =
       alive: yes
       hit: no
+      spent: 0
+      quota: 4
+      power: 50
+
+  impact: (target, Δt) ->  # Assume target has compatible component
+    damage-this-tick = @state.power * Δt
+    target.damage.health -= damage-this-tick
+    target.vel.1 += 10  # knockback
+    @state.spent += damage-this-tick
+    @state.hit = true
+
+  derive-color: ->
+    "rgb(255,#{ 255 - floor 255 * @state.spent/@state.quota },0)"
 
   update: (Δt) ->
     @vel = (@acc `v2.scale` Δt) `v2.add` @vel
     @pos = (@vel `v2.scale` Δt) `v2.add` @pos `v2.add` (@acc `v2.scale` (0.5 * Δt * Δt))
-
     @box.move-to @pos
     @state.alive = @pos.1 <= 150
-
-    return @state.alive and not @state.hit
+    return @state.alive and @state.spent <= @state.quota
 
   draw: ->
-    it.set-color if @state.hit then \red else \yellow
+    it.set-color @derive-color!
     it.rect [@pos.0 - @w/2, @pos.1 + @w/2], [ @w, @w * (3 + @vel.1/100) ]
     @box.draw it
 
