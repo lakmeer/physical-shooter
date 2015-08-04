@@ -23,9 +23,11 @@ export class Backdrop
       ctx.set-line-color "rgb(0,#{ floor 100 + 100 - (100+i)/2 },30)"
       ctx.line -board-size.0, y, board-size.0, y
 
-    for i from -board-size.0 to board-size.0 by @gap
-      ctx.line  board-size.0 + i, -board-size.1,  board-size.0 + i, board-size.1
-      ctx.line -board-size.0 - i, -board-size.1, -board-size.0 - i, board-size.1
+    x = board-size.0/2
+
+    for i from -x to x by @gap
+      ctx.line  x + i, -board-size.1,  x + i, board-size.1
+      ctx.line -x - i, -board-size.1, -x - i, board-size.1
 
 
   update: (Δt, time) ->

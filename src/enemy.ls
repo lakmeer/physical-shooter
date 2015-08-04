@@ -21,7 +21,7 @@ export class Enemy
     @bullets = []
 
     @vel = [0 0]
-    @acc = [0 -500 - rnd 50]
+    @acc = [0 -50 - rnd 50]
 
     @friction = 0.95
 

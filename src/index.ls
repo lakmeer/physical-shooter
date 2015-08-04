@@ -1,7 +1,7 @@
 
 # Require
 
-{ id, log, rnd, floor } = require \std
+{ id, log, v2, rnd, floor } = require \std
 
 { FrameDriver } = require \./frame-driver
 { Blitter }     = require \./blitter
@@ -17,7 +17,7 @@
 
 # Config
 
-{ board-size } = require \config
+{ board-size, time-factor } = require \config
 
 
 # Listen
@@ -34,9 +34,10 @@ document.add-event-listener \mousemove, ({ pageX, pageY }) ->
 
 # Init
 
-{ time-factor } = require \config
-
-last-shot-time = -1
+blast-force        = 100
+wave-size          = 50
+bullets-per-second = 30
+last-shot-time     = -1
 
 effects  = []
 enemies  = []
@@ -51,7 +52,7 @@ main-canvas.install document.body
 # Homeless functions
 
 emit-force-blast = (self, others) ->
-  force = 500
+  force = blast-force
 
   [ x, y ] = self.pos
 
@@ -65,13 +66,15 @@ emit-force-blast = (self, others) ->
     if (isNaN push.0) or (isNaN push.0)
       log x, ox, xx, y, oy, yy, d, ids, push
 
-    other.vel = push
+    other.vel = other.vel `v2.add` push
+
+new-wave = (n) ->
+  for i from 0 til n
+    pos = [ -board-size.0 + 10 + (rnd board-size.0*2), board-size.1 - rnd (board-size.1/2 - 10) ]
+    enemies.push new Enemy pos
 
 
-# Debug config
-
-bullets-per-second = 30
-
+# Tick functions
 
 play-test-frame = (Δt, time) ->
 
@@ -79,14 +82,13 @@ play-test-frame = (Δt, time) ->
   time *= time-factor
 
   backdrop.update Δt, time
-  #shaker.update Δt
+  shaker.update Δt
   player.update Δt, time
 
   effects.map (.update Δt, time)
 
   if enemies.length < 1
-    for i from 0 til 50
-      enemies.push new Enemy [ -board-size.0 + 10 + (rnd board-size.0*2), board-size.1 - rnd 90 ]
+    new-wave wave-size
 
   for enemy in enemies
     if enemy.damage.alive
