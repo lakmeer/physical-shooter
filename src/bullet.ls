@@ -12,6 +12,8 @@
 
 export class Bullet
 
+  { board-size } = require \config
+
   (@pos, @vel = [0 0], @acc = [(100 * Math.random! - 50), 1000]) ->
     @w     = 2
     @box   = new CollisionBox ...@pos, @w, @w
@@ -36,7 +38,7 @@ export class Bullet
     @vel = (@acc `v2.scale` Δt) `v2.add` @vel
     @pos = (@vel `v2.scale` Δt) `v2.add` @pos `v2.add` (@acc `v2.scale` (0.5 * Δt * Δt))
     @box.move-to @pos
-    @state.alive = @pos.1 <= 150
+    @state.alive = @pos.1 <= board-size.1 * 1.5
     return @state.alive and @state.spent <= @state.quota
 
   draw: ->

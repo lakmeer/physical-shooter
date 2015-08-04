@@ -15,10 +15,9 @@
 { Explosion }    = require \./explosion
 
 
-# Setup
+# Config
 
-main-canvas = new Blitter
-main-canvas.install document.body
+{ board-size } = require \config
 
 
 # Listen
@@ -44,6 +43,9 @@ enemies  = []
 player   = new Player
 shaker   = new ScreenShake
 backdrop = new Backdrop
+
+main-canvas = new Blitter
+main-canvas.install document.body
 
 
 # Homeless functions
@@ -84,7 +86,7 @@ play-test-frame = (Δt, time) ->
 
   if enemies.length < 1
     for i from 0 til 50
-      enemies.push new Enemy [ -90 + (rnd 180), 90 - rnd 90 ]
+      enemies.push new Enemy [ -board-size.0 + 10 + (rnd board-size.0*2), board-size.1 - rnd 90 ]
 
   for enemy in enemies
     if enemy.damage.alive

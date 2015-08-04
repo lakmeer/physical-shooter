@@ -12,9 +12,11 @@
 
 export class Player
 
+  { board-size } = require \config
+
   ->
     @bullets = []
-    @pos = [0 -80]
+    @pos = [0 10 - board-size.1]
     @box = new CollisionBox ...@pos, 10, 10
     @auto-move = yes
 

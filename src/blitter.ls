@@ -15,7 +15,7 @@ export class Blitter
 
   bs = board-size
 
-  (@size = [ screen-size, screen-size ]) ->
+  (@size = screen-size) ->
     @canvas = document.create-element \canvas
     @ctx    = @canvas.get-context \2d
 
@@ -73,24 +73,24 @@ export class Blitter
 
   show-grid: ->
     @set-line-color \grey
-    @line 0, bs, 0, -bs
-    @line bs, 0, -bs, 0
+    @line 0, bs.1, 0, -bs.1
+    @line bs.0, 0, -bs.0, 0
 
   install: (host) ->
     host.append-child @canvas
 
   game-size-to-screen-size: ([ w, h ]) ->
-    [ w * 0.5 * @size.0/bs, h * 0.5 * @size.1/bs ]
+    [ w * 0.5 * @size.0/bs.0, h * 0.5 * @size.1/bs.1 ]
 
   screen-size-to-game-size: ([ w, h ]) ->
-    [ w * 2 * bs/@size.0, h * 2 * bs/@size.1 ]
+    [ w * 2 * bs.0/@size.0, h * 2 * bs.1/@size.1 ]
 
   game-space-to-screen-space: ([ x, y ]) ->
-    [ @size.0/2 + @size.0/2 * x/bs + @offset.0,
-      @size.1/2 - @size.1/2 * y/bs + @offset.1 ]
+    [ @size.0/2 + @size.0/2 * x/bs.0 + @offset.0,
+      @size.1/2 - @size.1/2 * y/bs.1 + @offset.1 ]
 
   screen-space-to-game-space: ([ x, y ]) ->
-    [ x * bs * 2/@size.0 - bs, bs - y * bs * 2/@size.1 ]
+    [ x * bs.0 * 2/@size.0 - bs.0, bs.1 - y * bs.1 * 2/@size.1 ]
 
   set-offset: ([ x, y ]) ->
     @offset.0 = x

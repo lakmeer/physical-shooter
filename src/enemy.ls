@@ -11,12 +11,17 @@
 #
 
 export class Enemy
+
+  { board-size } = require \config
+
+  border = 10
+
   (@pos = [0 0]) ->
     @box = new CollisionBox ...@pos, 10, 10
     @bullets = []
 
     @vel = [0 0]
-    @acc = [0 -50 - rnd 50]
+    @acc = [0 -500 - rnd 50]
 
     @friction = 0.95
 
@@ -29,10 +34,10 @@ export class Enemy
   update: (Δt, time) ->
     @bullets := @bullets.filter (.update Δt)
     physics this, Δt
-    if @pos.0 >  90 then @pos.0 =  90
-    if @pos.0 < -90 then @pos.0 = -90
-    if @pos.1 >  90 then @pos.1 =  90
-    if @pos.1 < -30 then @pos.1 = -30
+    if @pos.0 >  board-size.0 - border then @pos.0 =  board-size.0 - border
+    if @pos.0 < -board-size.0 + border then @pos.0 = -board-size.0 + border
+    if @pos.1 >  board-size.1 - border then @pos.1 =  board-size.1 - border
+    if @pos.1 < -board-size.1 + border + 50 then @pos.1 = -board-size.1 + border + 50
     @box.move-to @pos
 
   move-to: (@pos) ->
