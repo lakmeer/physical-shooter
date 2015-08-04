@@ -12,8 +12,14 @@
 
 export class FrameDriver
 
+  readout = document.create-element \pre
+  readout.style <<< { position: \absolute, color: \white, top: 0, right: 0 }
+  document.body.append-child readout
+
   tps-history-window = 20
   fps-history-window = 20
+
+  RENDER_ON_TICK = no
 
   ->
     log "FrameDriver::new"
@@ -55,10 +61,16 @@ export class FrameDriver
     now = Date.now! - @state.zero
     Δt  = now - @state.last-tick-time
 
-    @push-tick-time Δt
+    readout.text-content = @fps.value + " | " + @tps.value
 
+    @push-tick-time Δt
     @state.last-tick-time = now
     @callbacks.tick Δt/1000, @state.last-tick-time/1000, @state.frame, @fps
+
+    if RENDER_ON_TICK
+      @push-frame-time Δt
+      @state.frame += 1
+      @callbacks.frame @state.frame
 
   start: ->
     if @state.running is yes then return
@@ -68,7 +80,7 @@ export class FrameDriver
     @state.last-frame-time = 0
     @state.running = yes
     @tick!
-    @frame!
+    @frame! unless RENDER_ON_TICK
 
   stop: ->
     if @state.running is no then return
