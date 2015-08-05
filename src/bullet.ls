@@ -14,7 +14,9 @@ export class Bullet
 
   { board-size } = require \config
 
-  (@pos, @vel = [0 0], @acc = [(100 * Math.random! - 50), 1000]) ->
+  (@pos) ->
+    @vel = [0 0]
+    @acc = [(100 * Math.random! - 50), 1000]
     @w     = 2
     @box   = new CollisionBox ...@pos, @w, @w
     @state =

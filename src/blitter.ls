@@ -2,7 +2,6 @@
 { id, log, tau, floor } = require \std
 { test } = require \test
 
-
 #
 # Blitter
 #
@@ -13,9 +12,7 @@ export class Blitter
 
   { screen-size, board-size } = require \config
 
-  bs = board-size
-
-  (@size = screen-size) ->
+  (@size = screen-size, @bs = board-size) ->
     @canvas = document.create-element \canvas
     @ctx    = @canvas.get-context \2d
 
@@ -73,24 +70,24 @@ export class Blitter
 
   show-grid: ->
     @set-line-color \grey
-    @line 0, bs.1, 0, -bs.1
-    @line bs.0, 0, -bs.0, 0
+    @line 0, @bs.1, 0, -@bs.1
+    @line @bs.0, 0, -@bs.0, 0
 
   install: (host) ->
     host.append-child @canvas
 
   game-size-to-screen-size: ([ w, h ]) ->
-    [ w * 0.5 * @size.0/bs.0, h * 0.5 * @size.1/bs.1 ]
+    [ w * 0.5 * @size.0/@bs.0, h * 0.5 * @size.1/@bs.1 ]
 
   screen-size-to-game-size: ([ w, h ]) ->
-    [ w * 2 * bs.0/@size.0, h * 2 * bs.1/@size.1 ]
+    [ w * 2 * @bs.0/@size.0, h * 2 * @bs.1/@size.1 ]
 
   game-space-to-screen-space: ([ x, y ]) ->
-    [ @size.0/2 + @size.0/2 * x/bs.0 + @offset.0,
-      @size.1/2 - @size.1/2 * y/bs.1 + @offset.1 ]
+    [ @size.0/2 + @size.0/2 * x/@bs.0 + @offset.0,
+      @size.1/2 - @size.1/2 * y/@bs.1 + @offset.1 ]
 
   screen-space-to-game-space: ([ x, y ]) ->
-    [ x * bs.0 * 2/@size.0 - bs.0, bs.1 - y * bs.1 * 2/@size.1 ]
+    [ x * @bs.0 * 2/@size.0 - @bs.0, @bs.1 - y * @bs.1 * 2/@size.1 ]
 
   set-offset: ([ x, y ]) ->
     @offset.0 = x
@@ -102,7 +99,7 @@ export class Blitter
 #
 
 test "Blitter - Game space to screen space", ->
-  blitter = new Blitter [ 100, 100 ]
+  blitter = new Blitter [ 100, 100 ], [ 100, 100 ]
 
   @equal-v2 'Origin is in the center'
     .expect blitter.game-space-to-screen-space [ 0, 0 ]
@@ -126,7 +123,7 @@ test "Blitter - Game space to screen space", ->
 
 
 test "Blitter - Screen space to game space", ->
-  blitter = new Blitter [ 100, 100 ]
+  blitter = new Blitter [ 100, 100 ], [ 100, 100 ]
 
   @equal-v2 'Origin is in the center'
     .expect blitter.screen-space-to-game-space [ 50, 50 ]

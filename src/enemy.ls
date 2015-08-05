@@ -50,7 +50,11 @@ export class Enemy
     ctx.rect @pos `v2.add` [-5,5], box 10
     @box.draw ctx
 
-  shoot: ->
-    @bullets.push new Bullet [ @pos.0 - 0.04, @pos.1 ]
+  shoot-at: (pos) ->
+
     @bullets.push new Bullet [ @pos.0 + 0.04, @pos.1 ]
+
+
+
+
 
