@@ -68,6 +68,14 @@ export class Blitter
     @ctx.close-path!
     @ctx.fill!
 
+  stroke-circle: (pos, diam) ->
+    [ x, y ] = @game-space-to-screen-space pos
+    [ rad ] = @game-size-to-screen-size [ diam/2, 0 ]
+    @ctx.begin-path!
+    @ctx.arc x, y, rad, 0, tau
+    @ctx.close-path!
+    @ctx.stroke!
+
   show-grid: ->
     @set-line-color \grey
     @line 0, @bs.1, 0, -@bs.1

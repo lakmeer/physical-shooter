@@ -1,7 +1,7 @@
 
 # Require
 
-{ id, log, v2, rnd, floor } = require \std
+{ id, log, v2, rnd, floor, limit } = require \std
 
 { FrameDriver } = require \./frame-driver
 { Blitter }     = require \./blitter
@@ -22,10 +22,28 @@
 
 # Listen
 
-document.add-event-listener \keydown, ({ which }) ->
+KEY_Z = 90
+KEY_X = 88
+KEY_C = 67
+SPACE = 32
+ESCAPE = 27
+
+document.add-event-listener \keydown, ({ which }:event) ->
   switch which
-  | 32 => player.shoot!
-  | 27 => frame-driver.toggle!
+  | SPACE  => player.forcefield-active = yes
+  | ESCAPE => frame-driver.toggle!
+  | KEY_Z  => player.unkill!
+  | KEY_C  => player
+  | _  => return event
+  event.prevent-default!
+  return false
+
+document.add-event-listener \keyup, ({ which }:event) ->
+  switch which
+  | 32 => player.forcefield-active = no
+  | _  => return event
+  event.prevent-default!
+  return false
 
 document.add-event-listener \mousemove, ({ pageX, pageY }) ->
   player.move-to main-canvas.screen-space-to-game-space [ pageX, pageY ]
@@ -34,7 +52,8 @@ document.add-event-listener \mousemove, ({ pageX, pageY }) ->
 
 # Init
 
-blast-force        = 500
+blast-force        = 1000
+repulse-force      = 500
 wave-size          = 50
 bullets-per-second = 30
 last-shot-time     = -1
@@ -52,8 +71,7 @@ main-canvas.install document.body
 
 # Homeless functions
 
-emit-force-blast = (self, others) ->
-  force = blast-force
+emit-force-blast = (force, self, others) ->
 
   [ x, y ] = self.pos
 
@@ -62,6 +80,7 @@ emit-force-blast = (self, others) ->
     yy  = y - target.pos.1
     d   = Math.sqrt( xx*xx + yy*yy )
     ids = if d is 0 then 0 else 1 / (d*d)
+    ids = limit 0, force/1000, ids
     push = [ force * -xx * ids, force * -yy * ids]
     target.vel = target.vel `v2.add` push
 
@@ -100,6 +119,9 @@ play-test-frame = (Δt, time) ->
     if enemy.damage.alive
       enemy.update Δt, time
 
+      if not player.dead
+        enemy.fire-target = player
+
       for bullet in enemy.bullets
         if bullet.box.intersects player.box
           bullet.impact player, Δt
@@ -116,7 +138,19 @@ play-test-frame = (Δt, time) ->
               bullet.stray = true
               strays.push bullet
             effects.push new Explosion enemy.pos
-            emit-force-blast enemy, enemies
+            emit-force-blast blast-force, enemy, enemies
+            emit-force-blast blast-force, enemy, strays
+
+  if player.forcefield-active and not player.dead
+    emit-force-blast repulse-force, player, enemies
+    emit-force-blast repulse-force, player, strays
+    shaker.trigger 8, 0.1
+
+  if player.damage.health <= 0 and not player.dead
+    effects.push new Explosion player.pos
+    player.kill!
+    for enemy in enemies
+      enemy.fire-target = null
 
   enemies := enemies.filter (.damage.alive)
   effects := effects.filter (.state.alive)
@@ -134,7 +168,8 @@ play-test-frame = (Δt, time) ->
     for enemy in enemies
       log enemy.pos
 
-explosion-test-frame = (Δt, time, frames) ->
+
+explosion-test-frame = (Δt, time) ->
   Δt   *= time-factor
   time *= time-factor
 
@@ -150,6 +185,14 @@ explosion-test-frame = (Δt, time, frames) ->
     shaker.trigger 10, 1
     last-shot-time := new-shot-time
 
+
+forcefield-test-frame = (Δt, time) ->
+  player.dont-auto-move!
+  player.move-to [0 0]
+  backdrop.update Δt, time
+  player.update Δt, time
+
+
 render-frame = (frame) ->
   main-canvas.clear!
   main-canvas.set-offset shaker.get-offset!
@@ -160,8 +203,9 @@ render-frame = (frame) ->
   enemies.map (.draw main-canvas)
   player.draw main-canvas
 
+
 frame-driver = new FrameDriver
-frame-driver.on-tick play-test-frame
 frame-driver.on-frame render-frame
+frame-driver.on-tick play-test-frame
 frame-driver.start!
 
