@@ -34,13 +34,14 @@ document.add-event-listener \mousemove, ({ pageX, pageY }) ->
 
 # Init
 
-blast-force        = 100
+blast-force        = 500
 wave-size          = 50
 bullets-per-second = 30
 last-shot-time     = -1
 
 effects  = []
 enemies  = []
+strays   = []
 player   = new Player
 shaker   = new ScreenShake
 backdrop = new Backdrop
@@ -56,22 +57,26 @@ emit-force-blast = (self, others) ->
 
   [ x, y ] = self.pos
 
-  for other in others when other isnt self
-    xx  = x - other.pos.0
-    yy  = y - other.pos.1
+  blast = (target) ->
+    xx  = x - target.pos.0
+    yy  = y - target.pos.1
     d   = Math.sqrt( xx*xx + yy*yy )
     ids = if d is 0 then 0 else 1 / (d*d)
     push = [ force * -xx * ids, force * -yy * ids]
+    target.vel = target.vel `v2.add` push
 
-    if (isNaN push.0) or (isNaN push.0)
-      log x, ox, xx, y, oy, yy, d, ids, push
-
-    other.vel = other.vel `v2.add` push
+  for other in others when other isnt self
+    blast other
+    if other.bullets
+      for bullet in other.bullets
+        blast bullet
 
 new-wave = (n) ->
   for i from 0 til n
-    pos = [ -board-size.0 + 10 + (rnd board-size.0*2), board-size.1 - rnd (board-size.1/2 - 10) ]
-    enemies.push new Enemy pos
+    pos = [ -board-size.0 + 10 + (rnd board-size.0 * 2 - 10), board-size.1 - rnd (board-size.1/2 - 10) ]
+    enemy = new Enemy pos
+    enemy.fire-target = player
+    enemies.push enemy
 
 
 # Tick functions
@@ -85,6 +90,7 @@ play-test-frame = (Δt, time) ->
   shaker.update Δt
   player.update Δt, time
 
+  strays := strays.filter (.update Δt, time)
   effects.map (.update Δt, time)
 
   if enemies.length < 1
@@ -94,6 +100,10 @@ play-test-frame = (Δt, time) ->
     if enemy.damage.alive
       enemy.update Δt, time
 
+      for bullet in enemy.bullets
+        if bullet.box.intersects player.box
+          bullet.impact player, Δt
+
       for bullet in player.bullets
         if bullet.box.intersects enemy.box
           bullet.impact enemy, Δt
@@ -101,6 +111,10 @@ play-test-frame = (Δt, time) ->
           if enemy.damage.health <= 0
             enemy.damage.alive = no
             shaker.trigger 5, 0.2
+            for bullet in enemy.bullets
+              bullet.vel = bullet.vel `v2.scale` 0.5
+              bullet.stray = true
+              strays.push bullet
             effects.push new Explosion enemy.pos
             emit-force-blast enemy, enemies
 
@@ -136,12 +150,12 @@ explosion-test-frame = (Δt, time, frames) ->
     shaker.trigger 10, 1
     last-shot-time := new-shot-time
 
-
 render-frame = (frame) ->
   main-canvas.clear!
   main-canvas.set-offset shaker.get-offset!
   backdrop.draw main-canvas
 
+  strays.map  (.draw main-canvas)
   effects.map (.draw main-canvas)
   enemies.map (.draw main-canvas)
   player.draw main-canvas

@@ -24,6 +24,10 @@ export flip = (λ) -> (a, b) -> λ b, a
 
 export delay = flip set-timeout
 
+export limit = (min, max, n) --> if n < min then min else if n > max then max else n
+
+
+
 
 # Physics processors
 

@@ -1,5 +1,5 @@
 
-{ id, log, box, sfx, v2 } = require \std
+{ id, log, box, limit, floor, sfx, v2 } = require \std
 
 { CollisionBox } = require \./collision-box
 { Bullet } = require \./bullet
@@ -20,6 +20,16 @@ export class Player
     @box = new CollisionBox ...@pos, 10, 10
     @auto-move = yes
 
+    @damage =
+      health: 10000
+      max-hp: 10000
+
+  derive-color: ->
+    p = limit 0, 1, @damage.health / @damage.max-hp
+    g = floor 200 * p
+    r = 200 - g
+    "rgb(#r,#g,#g)"
+
   update: (Δt, time) ->
     if @auto-move
       @pos.0 = 90 * Math.sin time
@@ -31,7 +41,7 @@ export class Player
 
   draw: (ctx) ->
     @bullets.map (.draw ctx)
-    ctx.set-color \#35d
+    ctx.set-color @derive-color! # \#35d
     ctx.rect @pos `v2.add` [-5,5], box 10
     @box.draw ctx
 

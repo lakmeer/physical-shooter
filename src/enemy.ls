@@ -3,6 +3,9 @@
 
 { CollisionBox } = require \./collision-box
 
+{ EnemyBullet } = require \./bullet
+
+
 #
 # Enemy
 #
@@ -31,14 +34,30 @@ export class Enemy
       max-hp: 10
       alive: yes
 
+    @fire-timer =
+      target-time: 0.2
+      current-time: 0
+
+    @fire-target = null
+
   update: (Δt, time) ->
     @bullets := @bullets.filter (.update Δt)
+    @fire-timer.current-time += Δt
+
+    if @fire-timer.current-time >= @fire-timer.target-time
+      @fire-timer.current-time %= @fire-timer.target-time
+      if @fire-target
+        @shoot-at @fire-target.pos
+
     physics this, Δt
+    @confine-to-bounds!
+    @box.move-to @pos
+
+  confine-to-bounds: ->
     if @pos.0 >  board-size.0 - border then @pos.0 =  board-size.0 - border
     if @pos.0 < -board-size.0 + border then @pos.0 = -board-size.0 + border
     if @pos.1 >  board-size.1 - border then @pos.1 =  board-size.1 - border
     if @pos.1 < -board-size.1 + border + 50 then @pos.1 = -board-size.1 + border + 50
-    @box.move-to @pos
 
   move-to: (@pos) ->
     @box.move-to @pos
@@ -51,8 +70,15 @@ export class Enemy
     @box.draw ctx
 
   shoot-at: (pos) ->
+    xx = pos.0 - @pos.0
+    yy = pos.1 - @pos.1
+    bearing = [ xx, yy ]
 
-    @bullets.push new Bullet [ @pos.0 + 0.04, @pos.1 ]
+    bullet = new EnemyBullet [ @pos.0 + 0.04, @pos.1 ]
+    bullet.vel = bearing
+    bullet.acc = [ 0 0 ]
+
+    @bullets.push bullet
 
 
 
