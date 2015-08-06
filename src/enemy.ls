@@ -72,10 +72,10 @@ export class Enemy
   shoot-at: (pos) ->
     xx = pos.0 - @pos.0
     yy = pos.1 - @pos.1
-    bearing = [ xx, yy ]
+    bearing = v2.norm pos `v2.sub` @pos
 
     bullet = new EnemyBullet [ @pos.0 + 0.04, @pos.1 ]
-    bullet.vel = bearing
+    bullet.vel = bearing `v2.scale` 100
     bullet.acc = [ 0 0 ]
 
     @bullets.push bullet

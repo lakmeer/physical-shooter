@@ -62,13 +62,7 @@ effects  = []
 enemies  = []
 strays   = []
 
-x = (n = 100) ->*
-  while true
-    yield n += 5
-
-wave-size = x!
-log wave-size.next
-
+wave-size = do (n = 100) ->* while true => yield n += 5
 
 player   = new Player
 shaker   = new ScreenShake

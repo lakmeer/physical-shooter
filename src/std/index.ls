@@ -7,7 +7,11 @@ export raf = window.request-animation-frame
 
 export floor = Math.floor
 
+export sqrt = Math.sqrt
+
 export v2 =
+  hyp   : (v) -> sqrt (v.0 * v.0 + v.1 * v.1)
+  norm  : (v) -> d = v2.hyp v; [ v.0/d, v.1/d ]
   add   : (a, b) -> [ a.0 + b.0, a.1 + b.1 ]
   sub   : (a, b) -> [ a.0 - b.0, a.1 - b.1 ]
   scale : (v, f) -> [ v.0 * f, v.1 * f ]
