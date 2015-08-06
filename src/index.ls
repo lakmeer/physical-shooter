@@ -61,6 +61,15 @@ last-shot-time     = -1
 effects  = []
 enemies  = []
 strays   = []
+
+x = (n = 100) ->*
+  while true
+    yield n += 5
+
+wave-size = x!
+log wave-size.next
+
+
 player   = new Player
 shaker   = new ScreenShake
 backdrop = new Backdrop
@@ -91,7 +100,7 @@ emit-force-blast = (force, self, others) ->
         blast bullet
 
 new-wave = (n) ->
-  for i from 0 til n
+  for i from 0 til log wave-size.next!value
     pos = [ -board-size.0 + 10 + (rnd board-size.0 * 2 - 10), board-size.1 - rnd (board-size.1/2 - 10) ]
     enemy = new Enemy pos
     enemy.fire-target = player
@@ -125,6 +134,20 @@ play-test-frame = (Δt, time) ->
       for bullet in enemy.bullets
         if bullet.box.intersects player.box
           bullet.impact player, Δt
+        for other-enemy in enemies when other-enemy isnt enemy
+          if bullet.box.intersects other-enemy.box
+            bullet.impact other-enemy, Δt
+
+            if other-enemy.damage.health <= 0
+              other-enemy.damage.alive = no
+              shaker.trigger 5, 0.2
+              for bullet in other-enemy.bullets
+                bullet.vel = bullet.vel `v2.scale` 0.5
+                bullet.stray = true
+                strays.push bullet
+              effects.push new Explosion other-enemy.pos
+              emit-force-blast blast-force, other-enemy, enemies
+              emit-force-blast blast-force, other-enemy, strays
 
       for bullet in player.bullets
         if bullet.box.intersects enemy.box
@@ -159,14 +182,14 @@ play-test-frame = (Δt, time) ->
 
   if new-shot-time > last-shot-time
     to-fire = new-shot-time - last-shot-time
-    for i from 0 til to-fire
-      player.shoot!
+    if not player.forcefield-active
+      void #for i from 0 til to-fire => player.shoot!
     last-shot-time := new-shot-time
 
-  return
-  if enemies.length < 5
+  for stray in strays
     for enemy in enemies
-      log enemy.pos
+      if stray.box.intersects enemy
+        stray.impact enemy
 
 
 explosion-test-frame = (Δt, time) ->
@@ -208,4 +231,3 @@ frame-driver = new FrameDriver
 frame-driver.on-frame render-frame
 frame-driver.on-tick play-test-frame
 frame-driver.start!
-
