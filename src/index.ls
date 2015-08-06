@@ -33,6 +33,7 @@ document.add-event-listener \keydown, ({ which }:event) ->
   | SPACE  => player.forcefield-active = yes
   | ESCAPE => frame-driver.toggle!
   | KEY_Z  => player.unkill!
+  | KEY_X  => player.magnet-active = yes
   | KEY_C  => player
   | _  => return event
   event.prevent-default!
@@ -40,7 +41,8 @@ document.add-event-listener \keydown, ({ which }:event) ->
 
 document.add-event-listener \keyup, ({ which }:event) ->
   switch which
-  | 32 => player.forcefield-active = no
+  | SPACE => player.forcefield-active = no
+  | KEY_X => player.magnet-active = no
   | _  => return event
   event.prevent-default!
   return false
@@ -50,11 +52,16 @@ document.add-event-listener \mousemove, ({ pageX, pageY }) ->
   player.dont-auto-move!
 
 
+# Game play note:
+# Initialising a force weapon cost more than running it for longer -
+# rapidly switching force weapons will use twoce as much as sustained use
+
 # Init
 
-blast-force        = 1000
-repulse-force      = 500
-wave-size          = 50
+blast-force        = 50000
+attract-force      = -10000
+repulse-force      = 10000
+start-wave-size    = 25
 bullets-per-second = 30
 last-shot-time     = -1
 
@@ -62,7 +69,7 @@ effects  = []
 enemies  = []
 strays   = []
 
-wave-size = do (n = 100) ->* while true => yield n += 5
+wave-size = do (n = start-wave-size) ->* while true => yield n += 5
 
 player   = new Player
 shaker   = new ScreenShake
@@ -74,17 +81,18 @@ main-canvas.install document.body
 
 # Homeless functions
 
-emit-force-blast = (force, self, others) ->
+emit-force-blast = (force, self, others, Δt) ->
 
   [ x, y ] = self.pos
+
+  limiter = if force < 0 then limit force, 0 else limit 0, force
 
   blast = (target) ->
     xx  = x - target.pos.0
     yy  = y - target.pos.1
-    d   = Math.sqrt( xx*xx + yy*yy )
+    d   = Math.sqrt( xx * xx + yy * yy )
     ids = if d is 0 then 0 else 1 / (d*d)
-    ids = limit 0, force/1000, ids
-    push = [ force * -xx * ids, force * -yy * ids]
+    push = [ force * -xx * ids * Δt, force * -yy * ids * Δt]
     target.vel = target.vel `v2.add` push
 
   for other in others when other isnt self
@@ -126,22 +134,8 @@ play-test-frame = (Δt, time) ->
         enemy.fire-target = player
 
       for bullet in enemy.bullets
-        if bullet.box.intersects player.box
+        if player.damage.health > 0 and bullet.box.intersects player.box
           bullet.impact player, Δt
-        for other-enemy in enemies when other-enemy isnt enemy
-          if bullet.box.intersects other-enemy.box
-            bullet.impact other-enemy, Δt
-
-            if other-enemy.damage.health <= 0
-              other-enemy.damage.alive = no
-              shaker.trigger 5, 0.2
-              for bullet in other-enemy.bullets
-                bullet.vel = bullet.vel `v2.scale` 0.5
-                bullet.stray = true
-                strays.push bullet
-              effects.push new Explosion other-enemy.pos
-              emit-force-blast blast-force, other-enemy, enemies
-              emit-force-blast blast-force, other-enemy, strays
 
       for bullet in player.bullets
         if bullet.box.intersects enemy.box
@@ -151,17 +145,22 @@ play-test-frame = (Δt, time) ->
             enemy.damage.alive = no
             shaker.trigger 5, 0.2
             for bullet in enemy.bullets
-              bullet.vel = bullet.vel `v2.scale` 0.5
+              #bullet.vel = bullet.vel `v2.scale` 0.2
               bullet.stray = true
+              bullet.friction = 0.99
               strays.push bullet
             effects.push new Explosion enemy.pos
-            emit-force-blast blast-force, enemy, enemies
-            emit-force-blast blast-force, enemy, strays
+            emit-force-blast blast-force, enemy, enemies, Δt
+            emit-force-blast blast-force, enemy, strays, Δt
 
   if player.forcefield-active and not player.dead
-    emit-force-blast repulse-force, player, enemies
-    emit-force-blast repulse-force, player, strays
-    shaker.trigger 8, 0.1
+    emit-force-blast repulse-force, player, enemies, Δt
+    #emit-force-blast repulse-force, player, strays
+    shaker.trigger 5, 0.1
+
+  if player.magnet-active and not player.dead
+    emit-force-blast attract-force, player, strays, Δt
+    shaker.trigger 2, 0.1
 
   if player.damage.health <= 0 and not player.dead
     effects.push new Explosion player.pos
@@ -177,13 +176,27 @@ play-test-frame = (Δt, time) ->
   if new-shot-time > last-shot-time
     to-fire = new-shot-time - last-shot-time
     if not player.forcefield-active
-      void #for i from 0 til to-fire => player.shoot!
+      for i from 0 til to-fire => player.shoot!
     last-shot-time := new-shot-time
 
   for stray in strays
     for enemy in enemies
-      if stray.box.intersects enemy
-        stray.impact enemy
+      if stray.box.intersects enemy.box
+        stray.impact enemy, Δt
+
+        if enemy.damage.health <= 0
+          enemy.damage.alive = no
+          shaker.trigger 5, 0.2
+          for bullet in enemy.bullets
+            #bullet.vel = bullet.vel `v2.scale` 0.2
+            bullet.stray = true
+            bullet.friction = 0.99
+            strays.push bullet
+          effects.push new Explosion enemy.pos
+          emit-force-blast blast-force, enemy, enemies, Δt
+          emit-force-blast blast-force, enemy, strays, Δt
+
+
 
 
 explosion-test-frame = (Δt, time) ->

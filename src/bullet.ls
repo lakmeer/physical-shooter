@@ -69,6 +69,7 @@ export class EnemyBullet
       quota: 1
       power: 25
     @stray = no
+    @friction = 1
 
   impact: (target, Δt) ->  # Assume target has compatible component
     damage-this-tick = @state.power * Δt
@@ -83,7 +84,7 @@ export class EnemyBullet
       "rgb(#{ 255 - floor 255 * @state.spent/@state.quota },255,255)"
 
   update: (Δt) ->
-    @vel = (@acc `v2.scale` Δt) `v2.add` @vel
+    @vel = (@acc `v2.scale` Δt) `v2.add` @vel `v2.scale` @friction
     @pos = (@vel `v2.scale` Δt) `v2.add` @pos `v2.add` (@acc `v2.scale` (0.5 * Δt * Δt))
     @box.move-to @pos
     @state.alive = @pos.1 <= board-size.1 * 1.5 and @pos.1 >= -board-size.1 * 1.5
