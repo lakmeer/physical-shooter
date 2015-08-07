@@ -50,8 +50,8 @@ document.add-event-listener \keyup, ({ which }:event) ->
 document.add-event-listener \mousemove, ({ pageX, pageY }) ->
   for player, i in players
     mouse = [ pageX, pageY ]
-    if i > 0 then mouse.0 = window.inner-width - pageX
-    if i > 1 then return
+    #if i > 0 then mouse.0 = window.inner-width - pageX
+    #if i > 1 then return
     dest = main-canvas.screen-space-to-game-space mouse
     player.move-to dest
     player.dont-auto-move!
@@ -77,7 +77,7 @@ enemies  = []
 players  = [ new Player i for i from 0 til player-count ]
 stray-collections = []
 
-wave-size = do (n = start-wave-size, x = 1) ->* while true => yield [ n += 5, x += 1 ]
+wave-size = do (n = start-wave-size, x = 0) ->* while true => yield [ n += 5, x += 1 ]
 
 #player   = new Player
 shaker   = new ScreenShake

@@ -61,7 +61,7 @@ export class Player
   (@index) ->
     @bullets = []
     @lasers = []
-    @pos = [0 10 - board-size.1]
+    @pos = [0 20 - board-size.1]
     @box = new CollisionBox ...@pos, 10, 10
     @auto-move = yes
     @score = 0
@@ -97,7 +97,7 @@ export class Player
     if @auto-move
       m = Math.sin time + @index * pi/2
       n = Math.sin time * 3
-      @pos.0 = board-size.0*0.95 * m * Math.abs(m)
+      @pos.0 = board-size.0*0.99 * m * Math.abs(m)
 
     @forcefield-phase += Δt * 40
     @bullets = @bullets.filter (.update Δt)
@@ -150,6 +150,6 @@ export class Player
 
   collect: (item) ->
     item.collected = yes
-    @score += 1
+    #log @index, @score += 1
 
 

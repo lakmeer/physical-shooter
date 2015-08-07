@@ -10,9 +10,7 @@
 
 export class Blitter
 
-  { screen-size, board-size } = require \config
-
-  scale-factor = 2
+  { screen-size, board-size, scale-factor } = require \config
 
   (@size = screen-size, @bs = board-size) ->
     @canvas = document.create-element \canvas

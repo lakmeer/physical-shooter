@@ -30,7 +30,7 @@ export class Bullet
       hit: no
       spent: 0
       quota: 8
-      power: 20
+      power: 40
 
   impact: (target, Δt) ->  # Assume target has compatible component
     damage-this-tick = @state.power * Δt
@@ -53,7 +53,7 @@ export class Bullet
   draw: ->
     it.set-color @derive-color!
     it.rect [@pos.0 - @w/2, @pos.1 + @w/2], [ @w, @w * (3 + @vel.1/100) ]
-    @box.draw it
+    #@box.draw it
 
 
 #
@@ -62,27 +62,30 @@ export class Bullet
 
 export class EnemyBullet
 
-  max-speed = 5
+  max-speed = 100
   range = 10
-  collection-ramp-up = 10
+  collection-ramp-up = 5
 
   { board-size } = require \config
 
   (@pos) ->
     @vel = [0 0]
     @acc = [(100 * Math.random! - 50), -1000]
+
     @w     = 5
     @box   = new CollisionBox ...@pos, @w, @w
+
+    @stray = no
+    @friction = 1
+    @color = \white
+    @collection-speed = 0
+
     @state =
       alive: yes
       hit: no
       spent: 0
       quota: 1
       power: 25
-    @stray = no
-    @friction = 1
-    @color = \white
-    @collection-speed = 0
 
   impact: (target, Δt) ->  # Assume target has compatible component
     damage-this-tick = @state.power * Δt
@@ -107,15 +110,15 @@ export class EnemyBullet
     diff = owner.pos `v2.sub` @pos
     dist = v2.hyp diff
 
-    @collection-speed += collection-ramp-up * Δt
-
     if dist < range
       owner.collect this
       return false
 
+    speed = min dist, @collection-speed + collection-ramp-up * Δt
+    @collection-speed = min max-speed, speed
     dir  = v2.norm diff
-    @pos = @pos `v2.add` (dir `v2.scale` (@collection-speed `min` max-speed))
-
+    jump = dir `v2.scale` @collection-speed
+    @pos = @pos `v2.add` jump
     return true
 
   draw: ->
@@ -123,8 +126,6 @@ export class EnemyBullet
     if @stray then it.ctx.global-alpha = 0.5
     it.circle @pos, @w
     if @stray then it.ctx.global-alpha = 1
-
-
 
 
 export class Laser

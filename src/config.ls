@@ -1,9 +1,15 @@
 
 export bullet-speed = 700
 
-export screen-size  = [ 1910/2, 980/2 ]
+export scale-factor = 1
 
-export board-size   = [ 1000/2, 1000/2 * screen-size.1/screen-size.0 ]
+export screen-size  = [ window.inner-width/scale-factor, window.inner-height/scale-factor ]
+
+export screen-aspect = screen-size.1/screen-size.0
+
+export world-width  = 500
+
+export board-size   = [ world-width, world-width * screen-aspect ]
 
 export time-factor  = 1
 
