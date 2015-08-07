@@ -1,4 +1,6 @@
 
+{ id, log } = require \std
+
 { test } = require \test
 
 #
@@ -12,9 +14,9 @@ export class CollisionBox
     @move-to [ x, y ]
     @colliding = no
 
-  draw: ->
-    it.set-line-color if @colliding then \red else \white
-    it.stroke-rect [ @left, @top ], [ @w, @h ]
+  draw: (ctx, what) ->
+    ctx.set-line-color if @colliding then \red else \white
+    ctx.stroke-rect [ @left, @top ], [ @w, @h ]
 
   move-to: ([ @x, @y ]) ->
     @top    = @y + @h/2
@@ -22,10 +24,22 @@ export class CollisionBox
     @right  = @x + @w/2
     @bottom = @y - @h/2
 
-  intersects: ({ left, right, top, bottom }) ->
-    @colliding =
+  move-x: (@x) ->
+    @top    = @y + @h/2
+    @left   = @x - @w/2
+    @right  = @x + @w/2
+    @bottom = @y - @h/2
+
+  intersects: ({ left, right, top, bottom }:target) ->
+    a =
       ( left  <=  @left  < right or right >= @right >  left ) and
       (bottom <= @bottom <  top  or  top  >=  @top  > bottom)
+    b =
+      ( @left  <=  left  < @right or @right >= right >  @left ) and
+      (@bottom <= bottom <  @top  or  @top  >=  top  > @bottom)
+
+    @colliding = target.colliding = a or b
+
 
 #
 # Tests

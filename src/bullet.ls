@@ -30,7 +30,7 @@ export class Bullet
       hit: no
       spent: 0
       quota: 8
-      power: 200
+      power: 20
 
   impact: (target, Δt) ->  # Assume target has compatible component
     damage-this-tick = @state.power * Δt
@@ -123,4 +123,51 @@ export class EnemyBullet
     if @stray then it.ctx.global-alpha = 0.5
     it.circle @pos, @w
     if @stray then it.ctx.global-alpha = 1
+
+
+
+
+export class Laser
+
+  { board-size } = require \config
+
+  ship-colors = [
+    -> "rgb(#{ 255 - floor it * 255 }, 0, 0)"
+    -> "rgb(0, 0, #{ 255 - floor it * 255 })"
+    -> "rgb(#{ 255 - floor it * 255 }, 0, #{ 255 - floor it * 255 })"
+  ]
+
+  (@pos, @index) ->
+    @w     = 10
+    @box   = new CollisionBox @pos.0, 0, @w, board-size.1 * 2
+    @state =
+      alive: yes
+      age: 0
+      life: 1
+      power: 100
+
+  impact: (target, Δt) ->  # Assume target has compatible component
+    damage-this-tick = @state.power * Δt
+    target.damage.health -= damage-this-tick
+    target.vel.1 += 10  # knockback
+    @state.spent += damage-this-tick
+    @state.hit = true
+
+  derive-color: (p) ->
+    ship-colors[@index] p
+
+  update: (Δt, pos) ->
+    @pos.0 = pos.0
+    @pos.1 = pos.1
+    @box.move-x @pos.0
+    @state.age += Δt
+    return @state.alive and @state.age < @state.life
+
+  draw: ->
+    p = @state.age / @state.life
+    it.set-color @derive-color p
+    it.ctx.global-alpha = 1 - p
+    it.rect [@pos.0 - @w/2, board-size.0 ], [ @w, board-size.0 * 2 ]
+    it.ctx.global-alpha = 1
+    #@box.draw it
 

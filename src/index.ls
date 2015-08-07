@@ -6,9 +6,9 @@
 { FrameDriver } = require \./frame-driver
 { Blitter }     = require \./blitter
 
-{ Player }   = require \./player
-{ Enemy }    = require \./enemy
-{ Backdrop } = require \./backdrop
+{ Player }          = require \./player
+{ Enemy, BigEnemy } = require \./enemy
+{ Backdrop }        = require \./backdrop
 
 { CollisionBox } = require \./collision-box
 { ScreenShake }  = require \./screen-shake
@@ -66,7 +66,7 @@ document.add-event-listener \mousemove, ({ pageX, pageY }) ->
 blast-force        = 50000
 attract-force      = -10000
 repulse-force      = 10000
-start-wave-size    = 1
+start-wave-size    = 30
 bullets-per-second = 30
 last-shot-time     = -1
 
@@ -77,7 +77,7 @@ enemies  = []
 players  = [ new Player i for i from 0 til player-count ]
 stray-collections = []
 
-wave-size = do (n = start-wave-size) ->* while true => yield n += 5
+wave-size = do (n = start-wave-size, x = 1) ->* while true => yield [ n += 5, x += 1 ]
 
 #player   = new Player
 shaker   = new ScreenShake
@@ -110,9 +110,16 @@ emit-force-blast = (force, self, others, Δt) ->
         blast bullet
 
 new-wave = (n) ->
-  for i from 0 til log wave-size.next!value
+  [ small, big ] = wave-size.next!value
+  for i from 0 til small
     pos = [ -board-size.0 + 10 + (rnd board-size.0 * 2 - 10), board-size.1 - rnd (board-size.1/2 - 10) ]
     enemy = new Enemy pos
+    enemy.fire-target = players.0
+    enemies.push enemy
+
+  for i from 0 til big
+    pos = [ -board-size.0 + 10 + (rnd board-size.0 * 2 - 10), board-size.1 - rnd (board-size.1/2 - 10) ]
+    enemy = new BigEnemy pos
     enemy.fire-target = players.0
     enemies.push enemy
 
@@ -169,23 +176,29 @@ play-test-frame = (Δt, time) ->
             bullet.impact player, Δt
 
       for player in players
+        for laser in player.lasers
+          if laser.box.intersects enemy.box
+            laser.impact enemy, Δt
+            enemy.last-hit = player
+
         for bullet in player.bullets
           if bullet.box.intersects enemy.box
             bullet.impact enemy, Δt
+            enemy.last-hit = player
 
-            if enemy.damage.health <= 0
-              enemy.damage.alive = no
-              shaker.trigger 5, 0.2
+      if enemy.damage.health <= 0
+        enemy.damage.alive = no
+        shaker.trigger 5, 0.2
 
-              stray-collections.push new CollectableStream enemy.bullets, player
-              effects.push new Explosion enemy.pos
-              effects.push new Wreckage enemy.pos, enemy.wreckage-sprite
-              emit-force-blast blast-force, enemy, enemies, Δt
-              emit-force-blast blast-force, enemy, enemy.bullets, Δt
+        owner = enemy.last-hit
+        stray-collections.push new CollectableStream enemy.bullets, owner
+        effects.push new Explosion enemy.pos
+        effects.push new Wreckage enemy.pos, enemy.wreckage-sprite
+        emit-force-blast blast-force, enemy, enemies, Δt
+        emit-force-blast blast-force, enemy, enemy.bullets, Δt
 
 
   for player in players
-
     if player.forcefield-active and not player.dead
       emit-force-blast repulse-force, player, enemies, Δt
       #emit-force-blast repulse-force, player, strays
