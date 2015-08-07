@@ -5,36 +5,34 @@
 { Bullet, Laser } = require \./bullet
 
 
-{ sprite } = require \./sprite
+{ sprite, palette-sprite } = require \./sprite
 
 
 # Generate graphic
 
-red  = sprite \/assets/ship-red.svg, 200
-blue = sprite \/assets/ship-blue.svg, 200
-pink = sprite \/assets/ship-pink.svg, 200
-
-color = sprite \/assets/ship-colormap.svg, 200
 lumin = sprite \/assets/ship-luminosity.svg, 200
 
-color.overlay lumin
+color-map-ix = 3
 
-ship-sprites = [ red, blue, pink ]
+color-schemes = [
+  [ \darkred, \lightblue, \pink ]
+  [ \darkblue, \lightblue, \royalblue ]
+  [ \purple, \lightblue, \magenta ]
+  [ \orangered, \lightblue, \orange ]
+  [ \darkgreen, \lightblue, \forestgreen ]
+]
 
-ajax = new XMLHttpRequest()
-ajax.open \GET, \/assets/ship-colormap.svg, true
-ajax.send!
-ajax.onload = (e) ->
-  div = document.createElement("div")
-  div.innerHTML = ajax.responseText
-  svg = div.children.0
+red    = palette-sprite \/assets/ship-colormap.svg, \/assets/ship-luminosity.svg, color-schemes.0, 200
+blue   = palette-sprite \/assets/ship-colormap.svg, \/assets/ship-luminosity.svg, color-schemes.1, 200
+pink   = palette-sprite \/assets/ship-colormap.svg, \/assets/ship-luminosity.svg, color-schemes.2, 200
+orange = palette-sprite \/assets/ship-colormap.svg, \/assets/ship-luminosity.svg, color-schemes.3, 200
+green  = palette-sprite \/assets/ship-colormap.svg, \/assets/ship-luminosity.svg, color-schemes.4, 200
 
-  pri = svg.get-elements-by-class-name \primary
-  sec = svg.get-elements-by-class-name \secondary
-  ter = svg.get-elements-by-class-name \tertiary
 
-  pri.set-attribute-NS \fill, \red
+color-map-src = \/assets/ship-colormap.svg
+lumin-map-src = \/assets/ship-luminosity.svg
 
+ship-sprites = [ red, blue, pink, orange, green ]
 
 
 #
@@ -56,6 +54,8 @@ export class Player
     -> "rgb(#{ 255 - floor it * 255 }, 0, 0)"
     -> "rgb(0, 0, #{ 255 - floor it * 255 })"
     -> "rgb(#{ 255 - floor it * 255 }, 0, #{ 255 - floor it * 255 })"
+    -> "rgb(#{ 255 - floor it * 255 }, #{ 128 - floor it * 128 }, 0)"
+    -> "rgb(0, #{ 230 - floor it * 230 }, 0)"
   ]
 
   (@index) ->
@@ -95,7 +95,7 @@ export class Player
   update: (Δt, time) ->
     if @dead then return
     if @auto-move
-      m = Math.sin time + @index * pi/2
+      m = Math.sin time + @index * pi / 3
       n = Math.sin time * 3
       @pos.0 = board-size.0*0.99 * m * Math.abs(m)
 
@@ -121,7 +121,7 @@ export class Player
     @draw-forcefield ctx if @forcefield-active
     @bullets.map (.draw ctx)
     @lasers.map (.draw ctx)
-    ctx.sprite color, @pos, sprite-size, sprite-offset
+    ctx.sprite ship-sprites[@index], @pos, sprite-size, sprite-offset
 
   draw-forcefield: (ctx) ->
     shells = 4

@@ -16,9 +16,9 @@ export class Wreckage
     friction: damp
 
   limit = 3
-  speed = 100
+  speed = 1000
   damp = 0.99
-  life = -> 1 + rnd 1
+  life = -> rnd 1
   size = [10 10]
 
   (@pos, @sprite) ->
@@ -26,7 +26,7 @@ export class Wreckage
 
     @state =
       age: 0
-      life: 2
+      life: 1
       alive: yes
 
     for p from 0 til limit

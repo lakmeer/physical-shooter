@@ -105,7 +105,6 @@ export class BigEnemy
   sprite-offset = sprite-size `v2.scale` 0.5
 
   (@pos = [0 0]) ->
-    log \new \BigEnemy
     @box = new CollisionBox @pos.0, @pos.1, 50, 30
     @bullets = []
 

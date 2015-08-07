@@ -18,6 +18,8 @@ export class Bullet
     -> "rgb(#{ 255 - floor it * 255 }, 0, 0)"
     -> "rgb(0, 0, #{ 255 - floor it * 255 })"
     -> "rgb(#{ 255 - floor it * 255 }, 0, #{ 255 - floor it * 255 })"
+    -> "rgb(#{ 255 - floor it * 255 }, #{ 128 - floor it * 128 }, 0)"
+    -> "rgb(0, #{ 230 - floor it * 230 }, 0)"
   ]
 
   (@pos, @index) ->

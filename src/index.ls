@@ -6,9 +6,10 @@
 { FrameDriver } = require \./frame-driver
 { Blitter }     = require \./blitter
 
-{ Player }          = require \./player
-{ Enemy, BigEnemy } = require \./enemy
-{ Backdrop }        = require \./backdrop
+{ Player }            = require \./player
+{ Backdrop }          = require \./backdrop
+{ Enemy, BigEnemy }   = require \./enemy
+{ CollectableStream } = require \./collectable-stream
 
 { CollisionBox } = require \./collision-box
 { ScreenShake }  = require \./screen-shake
@@ -66,18 +67,18 @@ document.add-event-listener \mousemove, ({ pageX, pageY }) ->
 blast-force        = 50000
 attract-force      = -10000
 repulse-force      = 10000
-start-wave-size    = 30
+start-wave-size    = 3
 bullets-per-second = 30
 last-shot-time     = -1
 
-player-count = 3
+player-count = 5
 
 effects  = []
 enemies  = []
 players  = [ new Player i for i from 0 til player-count ]
 stray-collections = []
 
-wave-size = do (n = start-wave-size, x = 0) ->* while true => yield [ n += 5, x += 1 ]
+wave-size = do (n = start-wave-size, x = 0) ->* while true => yield [ n += 1, 0 ] # x += 1 ]
 
 #player   = new Player
 shaker   = new ScreenShake
@@ -122,27 +123,6 @@ new-wave = (n) ->
     enemy = new BigEnemy pos
     enemy.fire-target = players.0
     enemies.push enemy
-
-
-move-toward = (target, object) ->
-
-class CollectableStream
-  (@items, @owner) ->
-    for item in @items
-      #bullet.vel = bullet.vel `v2.scale` 0.2
-      item.stray = true
-      item.owner = @owner
-      item.color = @owner.stray-color 0
-      item.friction = 0.99
-
-  update: (Δt, time) ->
-    owner = @owner
-    @items = @items.filter (.update-stray Δt, owner)
-    @items.length > 0
-    emit-force-blast attract-force, @owner, @items, Δt
-
-  draw: (ctx) ->
-    @items.map (.draw ctx)
 
 
 
