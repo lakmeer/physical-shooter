@@ -5,6 +5,13 @@
 
 { EnemyBullet } = require \./bullet
 
+{ sprite } = require \./sprite
+
+
+black = sprite \/assets/enemy.svg, 200
+
+sprite-size = [ 20, 20 ]
+sprite-offset = sprite-size `v2.scale` 0.5
 
 #
 # Enemy
@@ -41,6 +48,8 @@ export class Enemy
 
     @fire-target = null
 
+    @wreckage-sprite = sprite \/assets/chunk-enemy.svg, 100
+
   update: (Δt, time) ->
     @bullets := @bullets.filter (.update Δt)
     @fire-timer.current-time += Δt
@@ -66,9 +75,10 @@ export class Enemy
   draw: (ctx) ->
     return if not @damage.alive
     @bullets.map (.draw ctx)
-    ctx.set-color "hsl(#{floor 120*@damage.health/@damage.max-hp},100%,50%)"
-    ctx.rect @pos `v2.add` [-5,5], box 10
-    @box.draw ctx
+    #ctx.set-color "hsl(#{floor 120*@damage.health/@damage.max-hp},100%,50%)"
+    #ctx.rect @pos `v2.add` [-5,5], box 10
+    #@box.draw ctx
+    ctx.sprite black, @pos, sprite-size, sprite-offset
 
   shoot-at: (pos) ->
     xx = pos.0 - @pos.0

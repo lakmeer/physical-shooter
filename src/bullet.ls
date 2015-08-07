@@ -1,5 +1,5 @@
 
-{ id, log, floor, v2 } = require \std
+{ id, log, min, floor, v2 } = require \std
 
 { CollisionBox } = require \./collision-box
 
@@ -14,7 +14,13 @@ export class Bullet
 
   { board-size } = require \config
 
-  (@pos) ->
+  ship-colors = [
+    -> "rgb(#{ 255 - floor it * 255 }, 0, 0)"
+    -> "rgb(0, 0, #{ 255 - floor it * 255 })"
+    -> "rgb(#{ 255 - floor it * 255 }, 0, #{ 255 - floor it * 255 })"
+  ]
+
+  (@pos, @index) ->
     @vel = [0 0]
     @acc = [(100 * Math.random! - 50), 1000]
     @w     = 2
@@ -23,8 +29,8 @@ export class Bullet
       alive: yes
       hit: no
       spent: 0
-      quota: 4
-      power: 50
+      quota: 8
+      power: 200
 
   impact: (target, Δt) ->  # Assume target has compatible component
     damage-this-tick = @state.power * Δt
@@ -34,7 +40,8 @@ export class Bullet
     @state.hit = true
 
   derive-color: ->
-    "rgb(255,#{ 255 - floor 255 * @state.spent/@state.quota },0)"
+    p = @state.spent/@state.quota
+    ship-colors[@index] p
 
   update: (Δt) ->
     @vel = (@acc `v2.scale` Δt) `v2.add` @vel
@@ -55,6 +62,10 @@ export class Bullet
 
 export class EnemyBullet
 
+  max-speed = 5
+  range = 10
+  collection-ramp-up = 10
+
   { board-size } = require \config
 
   (@pos) ->
@@ -70,6 +81,8 @@ export class EnemyBullet
       power: 25
     @stray = no
     @friction = 1
+    @color = \white
+    @collection-speed = 0
 
   impact: (target, Δt) ->  # Assume target has compatible component
     damage-this-tick = @state.power * Δt
@@ -79,7 +92,7 @@ export class EnemyBullet
 
   derive-color: ->
     if @stray
-      \green
+      @color
     else
       "rgb(#{ 255 - floor 255 * @state.spent/@state.quota },255,255)"
 
@@ -90,7 +103,24 @@ export class EnemyBullet
     @state.alive = @pos.1 <= board-size.1 * 1.5 and @pos.1 >= -board-size.1 * 1.5
     return @state.alive and @state.spent <= @state.quota
 
+  update-stray: (Δt, owner) ->
+    diff = owner.pos `v2.sub` @pos
+    dist = v2.hyp diff
+
+    @collection-speed += collection-ramp-up * Δt
+
+    if dist < range
+      owner.collect this
+      return false
+
+    dir  = v2.norm diff
+    @pos = @pos `v2.add` (dir `v2.scale` (@collection-speed `min` max-speed))
+
+    return true
+
   draw: ->
     it.set-color @derive-color!
+    if @stray then it.ctx.global-alpha = 0.5
     it.circle @pos, @w
+    if @stray then it.ctx.global-alpha = 1
 

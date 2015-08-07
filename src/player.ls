@@ -5,19 +5,16 @@
 { Bullet } = require \./bullet
 
 
+{ sprite } = require \./sprite
+
+
 # Generate graphic
 
-ship-src= '/assets/ship.svg'
-ship-size = 200
+red  = sprite \/assets/ship-red.svg, 200
+blue = sprite \/assets/ship-blue.svg, 200
+pink = sprite \/assets/ship-pink.svg, 200
 
-ship-blitter = document.create-element \canvas
-ship-blitter.width = ship-blitter.height = ship-size
-ship-ctx = ship-blitter.get-context \2d
-
-ship-i = new Image
-ship-i.src = ship-src
-ship-i.onload = ->
-  ship-ctx.draw-image ship-i, 0, 0, ship-size, ship-size
+ship-sprites = [ red, blue, pink ]
 
 
 
@@ -34,11 +31,18 @@ export class Player
   sprite-size   = [ 30, 30 ]
   sprite-offset = sprite-size `v2.scale` 0.5
 
+  ship-colors = [
+    -> "rgb(#{ 255 - floor it * 255 }, 0, 0)"
+    -> "rgb(0, 0, #{ 255 - floor it * 255 })"
+    -> "rgb(#{ 255 - floor it * 255 }, 0, #{ 255 - floor it * 255 })"
+  ]
+
   (@index) ->
     @bullets = []
     @pos = [0 10 - board-size.1]
     @box = new CollisionBox ...@pos, 10, 10
     @auto-move = yes
+    @score = 0
 
     @damage =
       health: 200
@@ -46,6 +50,8 @@ export class Player
 
     @forcefield-phase = 0
     @forcefield-active = no
+
+    @stray-color = ship-colors[@index]
 
   kill: ->
     @dead = true
@@ -57,16 +63,14 @@ export class Player
 
   derive-color: ->
     p = limit 0, 1, @damage.health / @damage.max-hp
-    g = floor 200 * p
-    r = 200 - g
-    "rgb(#r,#g,#g)"
+    ship-colors[@index] p
 
   update: (Δt, time) ->
     if @dead then return
     if @auto-move
-      m = Math.sin time + @index * pi
+      m = Math.sin time + @index * pi/2
       n = Math.sin time * 3
-      @pos.0 = 90 * m * Math.abs(m)
+      @pos.0 = board-size.0*0.95 * m * Math.abs(m)
     @forcefield-phase += Δt * 40
     @bullets = @bullets.filter (.update Δt)
     @box.move-to @pos
@@ -78,10 +82,7 @@ export class Player
     if @dead then return
     @draw-forcefield ctx if @forcefield-active
     @bullets.map (.draw ctx)
-    ctx.sprite ship-blitter, @pos, sprite-size, sprite-offset
-    #ctx.set-color @derive-color! # \#35d
-    #ctx.rect @pos `v2.add` [-5,5], box 10
-    #@box.draw ctx
+    ctx.sprite ship-sprites[@index], @pos, sprite-size, sprite-offset
 
   draw-forcefield: (ctx) ->
     shells = 4
@@ -97,9 +98,13 @@ export class Player
   shoot: ->
     if @dead then return
     #sfx "PEW!"
-    @bullets.push new Bullet [ @pos.0 - 3, @pos.1 + 5 ]
-    @bullets.push new Bullet [ @pos.0 + 3, @pos.1 + 5 ]
+    @bullets.push new Bullet [ @pos.0 - 3, @pos.1 + 5 ], @index
+    @bullets.push new Bullet [ @pos.0 + 3, @pos.1 + 5 ], @index
 
   dont-auto-move: ->
     @auto-move = no
+
+  collect: (item) ->
+    item.collected = yes
+    @score += 1
 

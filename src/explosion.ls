@@ -59,7 +59,8 @@ export class Explosion
     @state.alive = @state.age < @state.life
 
   draw: (ctx) ->
-    ctx.ctx.global-composite-operation = \screen
+    #ctx.ctx.global-composite-operation = \hard-light
+    ctx.ctx.global-composite-operation = \lighter
 
     for set, type in @particles
       { size, color } = particle-types[type]

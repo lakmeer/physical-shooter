@@ -13,6 +13,7 @@
 { CollisionBox } = require \./collision-box
 { ScreenShake }  = require \./screen-shake
 { Explosion }    = require \./explosion
+{ Wreckage }     = require \./wreckage
 
 
 # Config
@@ -50,6 +51,7 @@ document.add-event-listener \mousemove, ({ pageX, pageY }) ->
   for player, i in players
     mouse = [ pageX, pageY ]
     if i > 0 then mouse.0 = window.inner-width - pageX
+    if i > 1 then return
     dest = main-canvas.screen-space-to-game-space mouse
     player.move-to dest
     player.dont-auto-move!
@@ -64,22 +66,20 @@ document.add-event-listener \mousemove, ({ pageX, pageY }) ->
 blast-force        = 50000
 attract-force      = -10000
 repulse-force      = 10000
-start-wave-size    = 30
+start-wave-size    = 1
 bullets-per-second = 30
 last-shot-time     = -1
 
-player-count = 2
+player-count = 3
 
 effects  = []
 enemies  = []
-strays   = []
 players  = [ new Player i for i from 0 til player-count ]
-
-log \player-count players
+stray-collections = []
 
 wave-size = do (n = start-wave-size) ->* while true => yield n += 5
 
-  #player   = new Player
+#player   = new Player
 shaker   = new ScreenShake
 backdrop = new Backdrop
 
@@ -117,6 +117,28 @@ new-wave = (n) ->
     enemies.push enemy
 
 
+move-toward = (target, object) ->
+
+class CollectableStream
+  (@items, @owner) ->
+    for item in @items
+      #bullet.vel = bullet.vel `v2.scale` 0.2
+      item.stray = true
+      item.owner = @owner
+      item.color = @owner.stray-color 0
+      item.friction = 0.99
+
+  update: (Δt, time) ->
+    owner = @owner
+    @items = @items.filter (.update-stray Δt, owner)
+    @items.length > 0
+    emit-force-blast attract-force, @owner, @items, Δt
+
+  draw: (ctx) ->
+    @items.map (.draw ctx)
+
+
+
 # Tick functions
 
 play-test-frame = (Δt, time) ->
@@ -128,7 +150,7 @@ play-test-frame = (Δt, time) ->
   shaker.update Δt
   players.map (.update Δt, time)
 
-  strays := strays.filter (.update Δt, time)
+  stray-collections := stray-collections.filter (.update Δt, time)
   effects.map (.update Δt, time)
 
   if enemies.length < 1
@@ -154,14 +176,13 @@ play-test-frame = (Δt, time) ->
             if enemy.damage.health <= 0
               enemy.damage.alive = no
               shaker.trigger 5, 0.2
-              for bullet in enemy.bullets
-                #bullet.vel = bullet.vel `v2.scale` 0.2
-                bullet.stray = true
-                bullet.friction = 0.99
-                strays.push bullet
+
+              stray-collections.push new CollectableStream enemy.bullets, player
               effects.push new Explosion enemy.pos
+              effects.push new Wreckage enemy.pos, enemy.wreckage-sprite
               emit-force-blast blast-force, enemy, enemies, Δt
-              emit-force-blast blast-force, enemy, strays, Δt
+              emit-force-blast blast-force, enemy, enemy.bullets, Δt
+
 
   for player in players
 
@@ -170,9 +191,9 @@ play-test-frame = (Δt, time) ->
       #emit-force-blast repulse-force, player, strays
       shaker.trigger 5/player-count, 0.1
 
-    if player.magnet-active and not player.dead
-      emit-force-blast attract-force, player, strays, Δt
-      shaker.trigger 2/player-count, 0.1
+    #if player.magnet-active and not player.dead
+      #emit-force-blast attract-force, player, strays, Δt
+      #shaker.trigger 2/player-count, 0.1
 
     if player.damage.health <= 0 and not player.dead
       effects.push new Explosion player.pos
@@ -191,25 +212,6 @@ play-test-frame = (Δt, time) ->
       if not player.forcefield-active
         for i from 0 til to-fire => player.shoot!
       last-shot-time := new-shot-time
-
-  for stray in strays
-    for enemy in enemies
-      if stray.box.intersects enemy.box
-        stray.impact enemy, Δt
-
-        if enemy.damage.health <= 0
-          enemy.damage.alive = no
-          shaker.trigger 5, 0.2
-          for bullet in enemy.bullets
-            #bullet.vel = bullet.vel `v2.scale` 0.2
-            bullet.stray = true
-            bullet.friction = 0.99
-            strays.push bullet
-          effects.push new Explosion enemy.pos
-          emit-force-blast blast-force, enemy, enemies, Δt
-          emit-force-blast blast-force, enemy, strays, Δt
-
-
 
 
 explosion-test-frame = (Δt, time) ->
@@ -241,7 +243,7 @@ render-frame = (frame) ->
   main-canvas.set-offset shaker.get-offset!
   backdrop.draw main-canvas
 
-  strays.map  (.draw main-canvas)
+  stray-collections.map  (.draw main-canvas)
   effects.map (.draw main-canvas)
   enemies.map (.draw main-canvas)
   players.map (.draw main-canvas)

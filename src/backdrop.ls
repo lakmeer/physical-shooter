@@ -13,14 +13,25 @@ export class Backdrop
 
   { board-size } = require \config
 
+  color-a = [ 140 51 49 ]
+  color-b = [ 165 27 95 ]
+
+  lerp = (a, t, b) -> a + t * (b - a)
+
   ->
     @offset = 0
     @gap    = 1
 
+  derive-color: (p) ->
+    h = floor lerp color-b.0, p, color-a.0
+    s = floor lerp color-b.1, p, color-a.1
+    l = floor lerp color-b.2, p, color-a.2
+    "hsl(#h,#s%,#l%)"
+
   draw: (ctx) ->
+    ctx.set-line-color @derive-color 0.4
     for i from -board-size.1 to board-size.1 by @gap
       y = i - @offset
-      ctx.set-line-color "rgb(0,#{ floor 100 + 100 - (100+i)/2 },30)"
       ctx.line -board-size.0, y, board-size.0, y
 
     x = board-size.0/2
