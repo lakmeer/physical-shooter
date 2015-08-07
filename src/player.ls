@@ -1,8 +1,25 @@
 
-{ id, log, box, limit, floor, sfx, v2 } = require \std
+{ id, log, box, limit, floor, sfx, v2, pi } = require \std
 
 { CollisionBox } = require \./collision-box
 { Bullet } = require \./bullet
+
+
+# Generate graphic
+
+ship-src= '/assets/ship.svg'
+ship-size = 200
+
+ship-blitter = document.create-element \canvas
+ship-blitter.width = ship-blitter.height = ship-size
+ship-ctx = ship-blitter.get-context \2d
+
+ship-i = new Image
+ship-i.src = ship-src
+ship-i.onload = ->
+  ship-ctx.draw-image ship-i, 0, 0, ship-size, ship-size
+
+
 
 #
 # Player
@@ -14,7 +31,10 @@ export class Player
 
   { board-size } = require \config
 
-  ->
+  sprite-size   = [ 30, 30 ]
+  sprite-offset = sprite-size `v2.scale` 0.5
+
+  (@index) ->
     @bullets = []
     @pos = [0 10 - board-size.1]
     @box = new CollisionBox ...@pos, 10, 10
@@ -44,7 +64,7 @@ export class Player
   update: (Δt, time) ->
     if @dead then return
     if @auto-move
-      m = Math.sin time
+      m = Math.sin time + @index * pi
       n = Math.sin time * 3
       @pos.0 = 90 * m * Math.abs(m)
     @forcefield-phase += Δt * 40
@@ -58,9 +78,10 @@ export class Player
     if @dead then return
     @draw-forcefield ctx if @forcefield-active
     @bullets.map (.draw ctx)
-    ctx.set-color @derive-color! # \#35d
-    ctx.rect @pos `v2.add` [-5,5], box 10
-    @box.draw ctx
+    ctx.sprite ship-blitter, @pos, sprite-size, sprite-offset
+    #ctx.set-color @derive-color! # \#35d
+    #ctx.rect @pos `v2.add` [-5,5], box 10
+    #@box.draw ctx
 
   draw-forcefield: (ctx) ->
     shells = 4

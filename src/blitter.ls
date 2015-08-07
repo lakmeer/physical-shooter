@@ -12,6 +12,8 @@ export class Blitter
 
   { screen-size, board-size } = require \config
 
+  scale-factor = 2
+
   (@size = screen-size, @bs = board-size) ->
     @canvas = document.create-element \canvas
     @ctx    = @canvas.get-context \2d
@@ -19,6 +21,8 @@ export class Blitter
     @canvas.width  = @size.0
     @canvas.height = @size.1
     @canvas.style.display = \block
+    @canvas.style.transform = "scale(#scale-factor)"
+    @canvas.style.transform-origin = "0% 0%"
 
     @offset = [0 0]
 
@@ -32,6 +36,12 @@ export class Blitter
 
   set-line-color: (col) ->
     @ctx.stroke-style = col
+
+  sprite: (img, pos, size, offset = [0 0]) ->
+    [ x, y ] = @game-space-to-screen-space pos
+    [ w, h ] = @game-size-to-screen-size size
+    [ u, v ] = @game-size-to-screen-size offset
+    @ctx.draw-image img, x - u, y - v, w, h
 
   rect: (pos, size) ->
     [ x, y ] = @game-space-to-screen-space pos
@@ -88,14 +98,14 @@ export class Blitter
     [ w * 0.5 * @size.0/@bs.0, h * 0.5 * @size.1/@bs.1 ]
 
   screen-size-to-game-size: ([ w, h ]) ->
-    [ w * 2 * @bs.0/@size.0, h * 2 * @bs.1/@size.1 ]
+    [ w * 2 * @bs.0/@size.0 / scale-factor, h * 2 * @bs.1/@size.1 * scale-factor ]
 
   game-space-to-screen-space: ([ x, y ]) ->
     [ @size.0/2 + @size.0/2 * x/@bs.0 + @offset.0,
       @size.1/2 - @size.1/2 * y/@bs.1 + @offset.1 ]
 
   screen-space-to-game-space: ([ x, y ]) ->
-    [ x * @bs.0 * 2/@size.0 - @bs.0, @bs.1 - y * @bs.1 * 2/@size.1 ]
+    [ x * @bs.0 * 2/@size.0 / scale-factor - @bs.0, @bs.1 - y * @bs.1 * 2/@size.1 / scale-factor ]
 
   set-offset: ([ x, y ]) ->
     @offset.0 = x

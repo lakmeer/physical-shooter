@@ -30,26 +30,29 @@ ESCAPE = 27
 
 document.add-event-listener \keydown, ({ which }:event) ->
   switch which
-  | SPACE  => player.forcefield-active = yes
+  | SPACE  => players.map (.forcefield-active = yes)
   | ESCAPE => frame-driver.toggle!
-  | KEY_Z  => player.unkill!
-  | KEY_X  => player.magnet-active = yes
-  | KEY_C  => player
+  | KEY_Z  => players.map (.unkill!)
+  | KEY_X  => players.map (.magnet-active = yes)
   | _  => return event
   event.prevent-default!
   return false
 
 document.add-event-listener \keyup, ({ which }:event) ->
   switch which
-  | SPACE => player.forcefield-active = no
-  | KEY_X => player.magnet-active = no
+  | SPACE => players.map (.forcefield-active = no)
+  | KEY_X => players.map (.magnet-active = no)
   | _  => return event
   event.prevent-default!
   return false
 
 document.add-event-listener \mousemove, ({ pageX, pageY }) ->
-  player.move-to main-canvas.screen-space-to-game-space [ pageX, pageY ]
-  player.dont-auto-move!
+  for player, i in players
+    mouse = [ pageX, pageY ]
+    if i > 0 then mouse.0 = window.inner-width - pageX
+    dest = main-canvas.screen-space-to-game-space mouse
+    player.move-to dest
+    player.dont-auto-move!
 
 
 # Game play note:
@@ -61,17 +64,22 @@ document.add-event-listener \mousemove, ({ pageX, pageY }) ->
 blast-force        = 50000
 attract-force      = -10000
 repulse-force      = 10000
-start-wave-size    = 25
+start-wave-size    = 30
 bullets-per-second = 30
 last-shot-time     = -1
+
+player-count = 2
 
 effects  = []
 enemies  = []
 strays   = []
+players  = [ new Player i for i from 0 til player-count ]
+
+log \player-count players
 
 wave-size = do (n = start-wave-size) ->* while true => yield n += 5
 
-player   = new Player
+  #player   = new Player
 shaker   = new ScreenShake
 backdrop = new Backdrop
 
@@ -105,7 +113,7 @@ new-wave = (n) ->
   for i from 0 til log wave-size.next!value
     pos = [ -board-size.0 + 10 + (rnd board-size.0 * 2 - 10), board-size.1 - rnd (board-size.1/2 - 10) ]
     enemy = new Enemy pos
-    enemy.fire-target = player
+    enemy.fire-target = players.0
     enemies.push enemy
 
 
@@ -118,7 +126,7 @@ play-test-frame = (Δt, time) ->
 
   backdrop.update Δt, time
   shaker.update Δt
-  player.update Δt, time
+  players.map (.update Δt, time)
 
   strays := strays.filter (.update Δt, time)
   effects.map (.update Δt, time)
@@ -130,43 +138,47 @@ play-test-frame = (Δt, time) ->
     if enemy.damage.alive
       enemy.update Δt, time
 
-      if not player.dead
-        enemy.fire-target = player
+      if not players.0.dead
+        enemy.fire-target = players.0
 
       for bullet in enemy.bullets
-        if player.damage.health > 0 and bullet.box.intersects player.box
-          bullet.impact player, Δt
+        for player in players
+          if player.damage.health > 0 and bullet.box.intersects player.box
+            bullet.impact player, Δt
 
-      for bullet in player.bullets
-        if bullet.box.intersects enemy.box
-          bullet.impact enemy, Δt
+      for player in players
+        for bullet in player.bullets
+          if bullet.box.intersects enemy.box
+            bullet.impact enemy, Δt
 
-          if enemy.damage.health <= 0
-            enemy.damage.alive = no
-            shaker.trigger 5, 0.2
-            for bullet in enemy.bullets
-              #bullet.vel = bullet.vel `v2.scale` 0.2
-              bullet.stray = true
-              bullet.friction = 0.99
-              strays.push bullet
-            effects.push new Explosion enemy.pos
-            emit-force-blast blast-force, enemy, enemies, Δt
-            emit-force-blast blast-force, enemy, strays, Δt
+            if enemy.damage.health <= 0
+              enemy.damage.alive = no
+              shaker.trigger 5, 0.2
+              for bullet in enemy.bullets
+                #bullet.vel = bullet.vel `v2.scale` 0.2
+                bullet.stray = true
+                bullet.friction = 0.99
+                strays.push bullet
+              effects.push new Explosion enemy.pos
+              emit-force-blast blast-force, enemy, enemies, Δt
+              emit-force-blast blast-force, enemy, strays, Δt
 
-  if player.forcefield-active and not player.dead
-    emit-force-blast repulse-force, player, enemies, Δt
-    #emit-force-blast repulse-force, player, strays
-    shaker.trigger 5, 0.1
+  for player in players
 
-  if player.magnet-active and not player.dead
-    emit-force-blast attract-force, player, strays, Δt
-    shaker.trigger 2, 0.1
+    if player.forcefield-active and not player.dead
+      emit-force-blast repulse-force, player, enemies, Δt
+      #emit-force-blast repulse-force, player, strays
+      shaker.trigger 5/player-count, 0.1
 
-  if player.damage.health <= 0 and not player.dead
-    effects.push new Explosion player.pos
-    player.kill!
-    for enemy in enemies
-      enemy.fire-target = null
+    if player.magnet-active and not player.dead
+      emit-force-blast attract-force, player, strays, Δt
+      shaker.trigger 2/player-count, 0.1
+
+    if player.damage.health <= 0 and not player.dead
+      effects.push new Explosion player.pos
+      player.kill!
+      for enemy in enemies
+        enemy.fire-target = null
 
   enemies := enemies.filter (.damage.alive)
   effects := effects.filter (.state.alive)
@@ -175,9 +187,10 @@ play-test-frame = (Δt, time) ->
 
   if new-shot-time > last-shot-time
     to-fire = new-shot-time - last-shot-time
-    if not player.forcefield-active
-      for i from 0 til to-fire => player.shoot!
-    last-shot-time := new-shot-time
+    for player in players
+      if not player.forcefield-active
+        for i from 0 til to-fire => player.shoot!
+      last-shot-time := new-shot-time
 
   for stray in strays
     for enemy in enemies
@@ -231,10 +244,11 @@ render-frame = (frame) ->
   strays.map  (.draw main-canvas)
   effects.map (.draw main-canvas)
   enemies.map (.draw main-canvas)
-  player.draw main-canvas
+  players.map (.draw main-canvas)
 
 
 frame-driver = new FrameDriver
 frame-driver.on-frame render-frame
 frame-driver.on-tick play-test-frame
 frame-driver.start!
+

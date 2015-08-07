@@ -18,6 +18,7 @@ export class Enemy
   { board-size } = require \config
 
   border = 10
+  fire-rate = 0.4
 
   (@pos = [0 0]) ->
     @box = new CollisionBox ...@pos, 10, 10
@@ -35,7 +36,7 @@ export class Enemy
       alive: yes
 
     @fire-timer =
-      target-time: 0.2
+      target-time: fire-rate
       current-time: 0
 
     @fire-target = null
