@@ -24,19 +24,17 @@ export class Enemy
   { board-size } = require \config
 
   border = 10
-  fire-rate = 0.4
-
+  fire-rate = 0.5
+  bullet-speed = 200
   sprite-size = [ 20, 20 ]
   sprite-offset = sprite-size `v2.scale` 0.5
 
   (@pos = [0 0]) ->
     @box = new CollisionRadius @pos.0, @pos.1, 10
-    @bullets = []
-    @type = \small
-
     @vel = [0 0]
     @acc = [0 -50 - rnd 50]
-
+    @type = \small
+    @bullets = []
     @friction = 0.95
 
     # Damage component
@@ -50,7 +48,6 @@ export class Enemy
       current-time: 0
 
     @fire-target = null
-
     @wreckage-sprite = sprite \/assets/chunk-enemy.svg, 100
 
   update: (Δt, time) ->
@@ -88,7 +85,7 @@ export class Enemy
     bearing = v2.norm pos `v2.sub` @pos
 
     bullet = new EnemyBullet [ @pos.0 + 0.04, @pos.1 ]
-    bullet.vel = bearing `v2.scale` 100
+    bullet.vel = bearing `v2.scale` bullet-speed
     bullet.acc = [ 0 0 ]
 
     @bullets.push bullet
@@ -100,15 +97,15 @@ export class BigEnemy
   { board-size } = require \config
 
   border = 10
-  fire-rate = 0.1
-
-  aspect =  71 / 100
-
+  aspect = 71 / 100
+  fire-rate = 0.05
   sprite-size = [ 50, 50 * aspect ]
+  bullet-speed = 200
   sprite-offset = sprite-size `v2.scale` 0.5
 
   (@pos = [0 0]) ->
-    @box = new CollisionRadius @pos.0, @pos.1, 40
+    @w = 40
+    @box = new CollisionRadius @pos.0, @pos.1, @w
     @bullets = []
     @type = \large
     @vel = [0 0]
@@ -144,10 +141,11 @@ export class BigEnemy
     @box.move-to @pos
 
   confine-to-bounds: ->
+    bord-z = board-size.1 * 0.5
     if @pos.0 >  board-size.0 - border then @pos.0 =  board-size.0 - border
     if @pos.0 < -board-size.0 + border then @pos.0 = -board-size.0 + border
     if @pos.1 >  board-size.1 - border then @pos.1 =  board-size.1 - border
-    if @pos.1 < -board-size.1 + border + 50 then @pos.1 = -board-size.1 + border + 50
+    if @pos.1 < -board-size.1 + bord-z then @pos.1 = -board-size.1 + bord-z
 
   move-to: (@pos) ->
     @box.move-to @pos
@@ -163,13 +161,13 @@ export class BigEnemy
     yy = pos.1 - @pos.1
     bearing = v2.norm pos `v2.sub` @pos
 
-    bullet = new EnemyBullet [ @pos.0 + 0.04, @pos.1 ]
-    bullet.vel = bearing `v2.scale` 100
+    bullet = new EnemyBullet [ @pos.0 + @w/2, @pos.1 ]
+    bullet.vel = bearing `v2.scale` bullet-speed
     bullet.acc = [ 0 0 ]
     @bullets.push bullet
 
-    bullet = new EnemyBullet [ @pos.0 - 0.04, @pos.1 ]
-    bullet.vel = bearing `v2.scale` 100
+    bullet = new EnemyBullet [ @pos.0 - @w/2, @pos.1 ]
+    bullet.vel = bearing `v2.scale` bullet-speed
     bullet.acc = [ 0 0 ]
     @bullets.push bullet
 

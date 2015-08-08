@@ -55,8 +55,6 @@ effects-limit      = 50
 player-count       = 3
 beam-attract-force = -100000
 
-wave-size = do (n = start-wave-size, x = 0) ->* while true => yield [ n += 1, floor x += 0.2 ]
-
 shaker           = new ScreenShake
 effects          = new EffectsDriver effects-limit
 backdrop         = new Backdrop
@@ -70,6 +68,10 @@ enemies = []
 pickups = []
 
 main-canvas.install document.body
+
+wave-size = do (n = start-wave-size, x = 1) ->*
+  while true
+    yield [ n += 1, floor x += 0.2 ]
 
 
 
@@ -234,7 +236,7 @@ play-test-frame = (Δt, time) ->
       shaker.trigger 1/player-count, 0.1
 
     if player.beam-vortex-active
-      emit-beam-blast beam-attract-force, {pos:[0 0]}, enemies, Δt
+      emit-beam-blast beam-attract-force, player, enemies, Δt
       #shaker.trigger 2/player-count, 0.1
 
     if player.damage.health <= 0 and not player.dead
@@ -384,35 +386,33 @@ KEY_C = 67
 SPACE = 32
 ESCAPE = 27
 
+my-player-index = 2
+
 document.add-event-listener \keydown, ({ which }:event) ->
   switch which
   | ESCAPE => frame-driver.toggle!
-  | SPACE  => players.map (.forcefield-active = yes)
   | ENTER  => players.map (.unkill!)
-  | KEY_Z  => players.map (.laser shaker)
-  | KEY_C  => players.map (.beam-vortex-active = yes)
-  | KEY_X  => players.map (.magnet-active = yes)
+  | SPACE  => players[my-player-index].forcefield-active = yes
+  | KEY_Z  => players[my-player-index].laser shaker
+  | KEY_C  => players[my-player-index].beam-vortex-active = yes
   | _  => return event
   event.prevent-default!
   return false
 
 document.add-event-listener \keyup, ({ which }:event) ->
   switch which
-  | SPACE => players.map (.forcefield-active = no)
-  | KEY_C  => players.map (.beam-vortex-active = no)
-  | KEY_X => players.map (.magnet-active = no)
+  | SPACE  => players[my-player-index].forcefield-active = no
+  | KEY_C  => players[my-player-index].beam-vortex-active = no
   | _  => return event
   event.prevent-default!
   return false
 
 main-canvas.canvas.add-event-listener \mousemove, ({ pageX, pageY }) ->
-  for player, i in players
-    mouse = [ pageX, pageY ]
-    #if i > 0 then mouse.0 = window.inner-width - pageX
-    #if i > 1 then return
-    dest = main-canvas.screen-space-to-game-space mouse
-    player.move-to dest
-    player.dont-auto-move!
+  player = players[my-player-index]
+  mouse = [ pageX, pageY ]
+  dest = main-canvas.screen-space-to-game-space mouse
+  player.move-to dest
+  player.dont-auto-move!
 
 
 # Init - default play-test-frame

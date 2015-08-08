@@ -76,14 +76,13 @@ export class EnemyBullet
 
   (@pos) ->
     @vel = [0 0]
-    @acc = [(100 * Math.random! - 50), -1000]
+    @acc = [0 0] # [(100 * Math.random! - 50), -1000]
 
     @w     = 5
     @box   = new CollisionRadius ...@pos, @w/2
-
     @stray = no
-    @friction = 1
     @color = \white
+    @friction = 1
     @collection-speed = 0
 
     @state =
