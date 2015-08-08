@@ -23,10 +23,10 @@ export class Explosion
 
     * size:  1
       life: -> rnd 0.5
-      color: -> \white
+      color: -> \black
       limit: 3
-      speed: 10000
-      damp: 0.8
+      speed: 2000
+      damp: 0.9
 
   new-particle = (pos, speed, damp, life) ->
     vel = rvel speed
@@ -37,17 +37,18 @@ export class Explosion
     life: life
     friction: damp
 
-  (@pos = [-50, 50]) ->
+  (@pos = [-50, 50], @scale = 1) ->
     @particles = [[] [] []]
 
     @state =
       age: 0
-      life: 2
+      life: 2 * @scale
       alive: yes
 
     for { speed, life, damp, limit }, i in particle-types
+      if i is 2 then limit *= @scale
       for p from 0 til limit
-        @particles[i]push new-particle @pos, speed, damp, life!
+        @particles[i]push new-particle @pos, speed * @scale, damp, @scale * life!
 
   update: (Δt) ->
     for set, type in @particles
@@ -68,7 +69,7 @@ export class Explosion
       for p in set when p.age < p.life
         ctx.ctx.global-alpha = 1 - p.age/p.life
         ctx.set-color color p.age/p.life
-        ctx.circle p.pos, size
+        ctx.circle p.pos, size * @scale
 
     ctx.ctx.global-alpha = 1
     ctx.ctx.global-composite-operation = \source-over

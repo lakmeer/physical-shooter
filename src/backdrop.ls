@@ -20,7 +20,7 @@ export class Backdrop
 
   ->
     @offset = 0
-    @gap    = 1
+    @gap    = 50
 
   derive-color: (p) ->
     h = floor lerp color-b.0, p, color-a.0

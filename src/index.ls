@@ -53,9 +53,9 @@ start-wave-size    = 10
 bullets-per-second = 30
 last-shot-time     = -1
 effects-limit      = 50
-player-count       = 6
+player-count       = 1
 
-wave-size = do (n = start-wave-size, x = 0) ->* while true => yield [ n += 5, x += 1 ]
+wave-size = do (n = start-wave-size, x = 0) ->* while true => yield [ n += 1, floor x += 0.2 ]
 
 shaker           = new ScreenShake
 effects          = new EffectsDriver effects-limit
@@ -203,7 +203,7 @@ play-test-frame = (Δt, time) ->
 
     if player.forcefield-active and not player.dead
       emit-force-blast repulse-force, player, enemies, Δt
-      shaker.trigger 5/player-count, 0.1
+      shaker.trigger 1/player-count, 0.1
 
     if player.damage.health <= 0 and not player.dead
       effects.push new Explosion player.pos
@@ -240,8 +240,9 @@ explosion-test-frame = (Δt, time) ->
   new-shot-time = floor time/2
 
   if new-shot-time > last-shot-time
-    effects.push new Explosion [ 0, 0 ]
-    shaker.trigger 10, 1
+    log scale = 1 + floor rnd 4
+    effects.push new Explosion [ 0, 0 ], scale
+    shaker.trigger scale, 1 + scale/4
     last-shot-time := new-shot-time
 
 
@@ -339,6 +340,6 @@ main-canvas.canvas.add-event-listener \mousemove, ({ pageX, pageY }) ->
 
 frame-driver = new FrameDriver
 frame-driver.on-frame render-frame
-frame-driver.on-tick play-test-frame
+frame-driver.on-tick explosion-test-frame
 frame-driver.start!
 
