@@ -1,7 +1,10 @@
 
-{ id, log, rnd } = require \std
+{ id, log, rnd, sqrt } = require \std
 
 { test } = require \test
+
+intersect-box-with-radius = ({ left, right, top, bottom }, { x, y, rad }) ->
+
 
 #
 # Collision Radius
@@ -9,36 +12,24 @@
 # Modular component for collision detection
 #
 
-export class CollisionBox
-  (x, y, @w, @h) ->
+export class CollisionRadius
+  (x, y, @rad) ->
     @move-to [ x, y ]
     @colliding = no
 
   draw: (ctx, what) ->
     ctx.set-line-color if @colliding then \red else \white
-    ctx.stroke-rect [ @left, @top ], [ @w, @h ]
+    ctx.stroke-circle [ @x, @y ], @rad * 2
 
   move-to: ([ @x, @y ]) ->
-    @top    = @y + @h/2
-    @left   = @x - @w/2
-    @right  = @x + @w/2
-    @bottom = @y - @h/2
 
   move-x: (@x) ->
-    @top    = @y + @h/2
-    @left   = @x - @w/2
-    @right  = @x + @w/2
-    @bottom = @y - @h/2
 
-  intersects: ({ left, right, top, bottom }:target) ->
-    a =
-      ( left  <=  @left  < right or right >= @right >  left ) and
-      (bottom <= @bottom <  top  or  top  >=  @top  > bottom)
-    b =
-      ( @left  <=  left  < @right or @right >= right >  @left ) and
-      (@bottom <= bottom <  @top  or  @top  >=  top  > @bottom)
-
-    @colliding = target.colliding = a or b
+  intersects: ({ x, y, rad }:target) ->
+    xx = @x - x
+    yy = @y - y
+    dist = sqrt xx * xx + yy * yy
+    @colliding = target.colliding = dist < @rad + rad
 
 
 #

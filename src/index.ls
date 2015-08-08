@@ -223,6 +223,8 @@ play-test-frame = (Δt, time) ->
 
   # Check for collisions on the black plane
   for player in players
+    player.shoot!
+
     for other in player-bin-space.get-bin-collisions player
       if player.damage.health > 0 and other.box.intersects player.box
         other.impact? player, Δt

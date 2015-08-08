@@ -1,7 +1,7 @@
 
 { id, log, box, limit, floor, sfx, v2, pi } = require \std
 
-{ CollisionBox } = require \./collision-box
+{ CollisionRadius } = require \./collision-box
 { Bullet, Laser } = require \./bullet
 
 
@@ -41,7 +41,7 @@ export class Player
   sprite-size   = [ 30, 30 ]
   sprite-offset = sprite-size `v2.scale` 0.5
 
-  bullet-rate = 0.1
+  bullet-rate = 0.05
   laser-rate = 2
 
   ship-colors = [
@@ -57,7 +57,7 @@ export class Player
     @bullets = []
     @lasers = []
     @pos = [0 20 - board-size.1]
-    @box = new CollisionBox ...@pos, 10, 10
+    @box = new CollisionRadius ...@pos, 10
     @auto-move = yes
     @score = 0
 
@@ -73,7 +73,7 @@ export class Player
 
     @bullet-timer =
       active: no
-      target-time: laser-rate
+      target-time: bullet-rate
       current-time: 0
 
     @laser-timer =
@@ -131,6 +131,7 @@ export class Player
     @bullets.map (.draw ctx)
     @lasers.map (.draw ctx)
     ctx.sprite ship-sprites[@index], @pos, sprite-size, sprite-offset
+    #@box.draw ctx
 
   draw-forcefield: (ctx) ->
     shells = 4
@@ -148,6 +149,7 @@ export class Player
     if @bullet-timer.active is no
       @bullets.push new Bullet [ @pos.0 - 3, @pos.1 + 5 ], this
       @bullets.push new Bullet [ @pos.0 + 3, @pos.1 + 5 ], this
+      @bullet-timer.active = yes
 
   laser: ->
     if @dead then return

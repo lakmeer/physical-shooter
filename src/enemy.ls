@@ -1,7 +1,7 @@
 
 { id, log, box, floor, physics, rnd, v2 } = require \std
 
-{ CollisionBox } = require \./collision-box
+{ CollisionRadius } = require \./collision-box
 
 { EnemyBullet } = require \./bullet
 
@@ -30,7 +30,7 @@ export class Enemy
   sprite-offset = sprite-size `v2.scale` 0.5
 
   (@pos = [0 0]) ->
-    @box = new CollisionBox @pos.0, @pos.1, 20, 20
+    @box = new CollisionRadius @pos.0, @pos.1, 10
     @bullets = []
     @type = \small
 
@@ -80,6 +80,7 @@ export class Enemy
     return if not @damage.alive
     @bullets.map (.draw ctx)
     ctx.sprite small, @pos, sprite-size, sprite-offset
+    #@box.draw ctx
 
   shoot-at: (pos) ->
     xx = pos.0 - @pos.0
@@ -107,7 +108,7 @@ export class BigEnemy
   sprite-offset = sprite-size `v2.scale` 0.5
 
   (@pos = [0 0]) ->
-    @box = new CollisionBox @pos.0, @pos.1, 50, 30
+    @box = new CollisionRadius @pos.0, @pos.1, 40
     @bullets = []
     @type = \large
     @vel = [0 0]
@@ -155,6 +156,7 @@ export class BigEnemy
     return if not @damage.alive
     @bullets.map (.draw ctx)
     ctx.sprite medium, @pos, sprite-size, sprite-offset
+    #@box.draw ctx
 
   shoot-at: (pos) ->
     xx = pos.0 - @pos.0

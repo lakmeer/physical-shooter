@@ -1,7 +1,7 @@
 
 { id, log, min, floor, v2 } = require \std
 
-{ CollisionBox } = require \./collision-box
+{ CollisionRadius } = require \./collision-box
 
 
 #
@@ -27,7 +27,7 @@ export class Bullet
     @vel = [0 0]
     @acc = [(100 * Math.random! - 50), 1000]
     @w     = 2
-    @box   = new CollisionBox ...@pos, @w, @w
+    @box   = new CollisionRadius ...@pos, @w/2
     @state =
       alive: yes
       hit: no
@@ -79,7 +79,7 @@ export class EnemyBullet
     @acc = [(100 * Math.random! - 50), -1000]
 
     @w     = 5
-    @box   = new CollisionBox ...@pos, @w, @w
+    @box   = new CollisionRadius ...@pos, @w/2
 
     @stray = no
     @friction = 1
@@ -131,6 +131,7 @@ export class EnemyBullet
     if @stray then it.ctx.global-alpha = 0.5
     it.circle @pos, @w
     if @stray then it.ctx.global-alpha = 1
+    #@box.draw it
 
 
 #
@@ -147,9 +148,23 @@ export class Laser
     -> "rgb(#{ 255 - floor it * 255 }, 0, #{ 255 - floor it * 255 })"
   ]
 
+  class LaserCollider
+    (@x, @y, @w) ->
+      @colliding = no
+    move-to: ([ @x, @y ]) ->
+    intersects: ({ x, y, rad }:target) ->
+      inside-left  = x > @x - @w/2 - rad
+      inside-right = x < @x + @w/2 + rad
+      above-player = y >= @y - rad
+      @colliding = target.colliding =
+        inside-left and inside-right and above-player
+    draw: (ctx) ->
+      ctx.set-line-color if @colliding then \red else \white
+      ctx.stroke-rect [ @x - @w/2, board-size.1 ], [ @w, board-size.1 - @y ]
+
   (@pos, @owner) ->
-    @w     = 30
-    @box   = new CollisionBox @pos.0, 0, @w, board-size.1 * 2
+    @w     = 50
+    @box   = new LaserCollider @pos.0, @pos.1, @w
     @state =
       alive: yes
       age: 0
@@ -169,7 +184,7 @@ export class Laser
   update: (Δt, pos) ->
     @pos.0 = pos.0
     @pos.1 = pos.1
-    @box.move-x @pos.0
+    @box.move-to @pos
     @state.age += Δt
     return @state.alive and @state.age < @state.life
 
@@ -177,7 +192,7 @@ export class Laser
     p = @state.age / @state.life
     it.set-color @derive-color p
     it.ctx.global-alpha = 1 - p
-    it.rect [@pos.0 - @w/2, board-size.0 ], [ @w, board-size.0 * 2 ]
+    it.rect [@pos.0 - @w/2, board-size.1 ], [ @w, board-size.1 - @pos.1 ]
     it.ctx.global-alpha = 1
     #@box.draw it
 
