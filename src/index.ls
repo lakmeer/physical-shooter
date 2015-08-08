@@ -1,7 +1,7 @@
 
 # Require
 
-{ id, log, min, v2, rnd, floor, limit } = require \std
+{ id, log, min, v2, rnd, floor, wrap, limit } = require \std
 
 { FrameDriver } = require \./frame-driver
 { Blitter }     = require \./blitter
@@ -49,11 +49,12 @@ blast-force        = 50000
 blast-force-large  = 500000
 attract-force      = -10000
 repulse-force      = 5000
-start-wave-size    = 10
+start-wave-size    = 40
 bullets-per-second = 30
 last-shot-time     = -1
 effects-limit      = 50
 player-count       = 1
+beam-attract-force = -100000
 
 wave-size = do (n = start-wave-size, x = 0) ->* while true => yield [ n += 1, floor x += 0.2 ]
 
@@ -94,6 +95,30 @@ emit-force-blast = (force, self, others, Δt) ->
       for bullet in other.bullets
         blast bullet
 
+
+emit-beam-blast = (force, self, others, Δt) ->
+
+  [ x ] = self.pos
+
+  effective-distance = 250
+  min-dist = 10
+
+  draw = (target, push) ->
+    xx  = x - target.pos.0
+    if Math.abs(xx) < min-dist
+      target.vel.0 += xx
+      if push then target.vel.1 *= 0.5
+    else
+      target.vel.0 += -xx * force * Δt * ids xx
+
+
+  for other in others when other isnt self
+    draw other
+    if other.bullets
+      for bullet in other.bullets
+        draw bullet, true
+
+
 new-wave = (n) ->
   [ small, big ] = wave-size.next!value
 
@@ -121,7 +146,7 @@ check-destroyed = (enemy, owner, Δt) ->
     enemy.damage.alive = no
     shaker.trigger 5, 0.2
     pickups.push new CollectableStream enemy.bullets, owner
-    effects.push new Explosion enemy.pos
+    effects.push new Explosion enemy.pos, if enemy.type is \large then 2 else 1
     effects.push new Wreckage enemy.pos, enemy.wreckage-sprite
     force = if enemy.type is \large then blast-force-large else blast-force
     emit-force-blast force, enemy, enemies, Δt
@@ -169,6 +194,7 @@ play-test-frame = (Δt, time) ->
 
   # Update players and their bullets
   for player in players
+    player.dont-auto-move!
     player.update Δt, time
     for bullet in player.bullets
       enemy-bin-space.assign-bin bullet
@@ -205,8 +231,12 @@ play-test-frame = (Δt, time) ->
       emit-force-blast repulse-force, player, enemies, Δt
       shaker.trigger 1/player-count, 0.1
 
+    if player.beam-vortex-active
+      emit-beam-blast beam-attract-force, {pos:[0 0]}, enemies, Δt
+      #shaker.trigger 2/player-count, 0.1
+
     if player.damage.health <= 0 and not player.dead
-      effects.push new Explosion player.pos
+      effects.push new Explosion player.pos, 3, player.explosion-tint-color
       player.kill!
       for enemy in enemies
         enemy.fire-target = null
@@ -221,37 +251,39 @@ play-test-frame = (Δt, time) ->
 
   enemies := enemies.filter (.damage.alive)
 
-  new-shot-time = floor time * bullets-per-second
 
-  if new-shot-time > last-shot-time
-    to-fire = new-shot-time - last-shot-time
-    for player in players
-      if not player.forcefield-active
-        for i from 0 til to-fire => player.shoot!
-      last-shot-time := new-shot-time
+effects-b = new EffectsDriver
+scales = [ 1 2 3 4 5 ]
+scale-index = -1
 
+# Test explosion particles
 explosion-test-frame = (Δt, time) ->
-  Δt   *= time-factor
-  time *= time-factor
-
   shaker.update Δt
   effects.update Δt, time
+  effects-b.update Δt * time-factor, time * time-factor
 
   new-shot-time = floor time/2
 
   if new-shot-time > last-shot-time
-    log scale = 1 + floor rnd 4
-    effects.push new Explosion [ 0, 0 ], scale
-    shaker.trigger scale, 1 + scale/4
+    scale-index := wrap 0, scales.length-1, scale-index + 1
+    scale = scales[scale-index]
+    tint  = players[floor rnd player-count].explosion-tint-color
+
+    effects.push   new Explosion [ -100, 0 ], scale, tint
+    effects-b.push new Explosion [  100, 0 ], scale, tint
+
+    #shaker.trigger scale, 1 + scale/4
     last-shot-time := new-shot-time
 
 
+# Test forcefield effect
 forcefield-test-frame = (Δt, time) ->
   player.dont-auto-move!
   player.move-to [0 0]
   backdrop.update Δt, time
   player.update Δt, time
 
+# Test crowd avoidance
 new-crowd = (n) ->
   [ small ] = wave-size.next!value
   for i from 0 til small
@@ -260,8 +292,8 @@ new-crowd = (n) ->
     enemy = new Enemy pos
     enemies.push enemy
 
-crowding-test-frame = (Δt, time) ->
 
+crowding-test-frame = (Δt, time) ->
   crowd-bin-space.clear!
 
   # Spawn new enemies if we've run out
@@ -290,6 +322,7 @@ render-frame = (frame) ->
   main-canvas.set-offset shaker.get-offset!
   backdrop.draw main-canvas
   effects.draw main-canvas
+  effects-b.draw main-canvas
 
   #enemy-bin-space.draw main-canvas
   #player-bin-space.draw main-canvas
@@ -302,6 +335,7 @@ render-frame = (frame) ->
 
 # Listen
 
+ENTER = 13
 KEY_Z = 90
 KEY_X = 88
 KEY_C = 67
@@ -310,9 +344,11 @@ ESCAPE = 27
 
 document.add-event-listener \keydown, ({ which }:event) ->
   switch which
-  | SPACE  => players.map (.forcefield-active = yes)
   | ESCAPE => frame-driver.toggle!
-  | KEY_Z  => players.map (.unkill!)
+  | SPACE  => players.map (.forcefield-active = yes)
+  | ENTER  => players.map (.unkill!)
+  | KEY_Z  => players.map (.laser!)
+  | KEY_C  => players.map (.beam-vortex-active = yes)
   | KEY_X  => players.map (.magnet-active = yes)
   | _  => return event
   event.prevent-default!
@@ -321,6 +357,7 @@ document.add-event-listener \keydown, ({ which }:event) ->
 document.add-event-listener \keyup, ({ which }:event) ->
   switch which
   | SPACE => players.map (.forcefield-active = no)
+  | KEY_C  => players.map (.beam-vortex-active = no)
   | KEY_X => players.map (.magnet-active = no)
   | _  => return event
   event.prevent-default!
@@ -340,6 +377,6 @@ main-canvas.canvas.add-event-listener \mousemove, ({ pageX, pageY }) ->
 
 frame-driver = new FrameDriver
 frame-driver.on-frame render-frame
-frame-driver.on-tick explosion-test-frame
+frame-driver.on-tick play-test-frame
 frame-driver.start!
 

@@ -16,7 +16,7 @@ export class Wreckage
     friction: damp
 
   limit = 3
-  speed = 1000
+  speed = 100
   damp = 0.99
   life = -> rnd 1
   size = [10 10]

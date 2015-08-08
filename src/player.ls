@@ -41,6 +41,7 @@ export class Player
   sprite-size   = [ 30, 30 ]
   sprite-offset = sprite-size `v2.scale` 0.5
 
+  bullet-rate = 0.1
   laser-rate = 2
 
   ship-colors = [
@@ -68,6 +69,12 @@ export class Player
     @forcefield-active = no
 
     @stray-color = ship-colors[@index]
+    @explosion-tint-color = ship-colors[@index] 0
+
+    @bullet-timer =
+      active: no
+      target-time: laser-rate
+      current-time: 0
 
     @laser-timer =
       active: no
@@ -106,6 +113,13 @@ export class Player
       @laser-timer.current-time = 0
       @laser-timer.active = no
 
+    if @bullet-timer.active
+      @bullet-timer.current-time += Δt
+
+    if @bullet-timer.current-time > @bullet-timer.target-time
+      @bullet-timer.current-time = 0
+      @bullet-timer.active = no
+
     @box.move-to @pos
 
   move-to: (@pos) ->
@@ -131,11 +145,12 @@ export class Player
 
   shoot: ->
     if @dead then return
-    #sfx "PEW!"
-    @bullets.push new Bullet [ @pos.0 - 3, @pos.1 + 5 ], this
-    @bullets.push new Bullet [ @pos.0 + 3, @pos.1 + 5 ], this
+    if @bullet-timer.active is no
+      @bullets.push new Bullet [ @pos.0 - 3, @pos.1 + 5 ], this
+      @bullets.push new Bullet [ @pos.0 + 3, @pos.1 + 5 ], this
 
   laser: ->
+    if @dead then return
     if @laser-timer.active is no
       @lasers.push new Laser [ @pos.0, @pos.1 ], this
       @laser-timer.active = yes

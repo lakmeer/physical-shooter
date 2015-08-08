@@ -1,5 +1,5 @@
 
-{ id, log, box, rnd, v2, physics, dampen } = require \std
+{ id, log, box, rnd, v2, floor, physics, dampen } = require \std
 
 rvel = (n = 100) -> [ n/2 - (rnd n), n/2 - (rnd n) ]
 
@@ -8,15 +8,15 @@ export class Explosion
 
   particle-types =
     * size: 15
-      life: -> 0.1 + rnd 0.4
-      color: -> "hsl(#{(rnd 60) - it*20}, 50%, 50%)"
-      limit: 15
+      life: -> 0.3 + rnd 0.7
+      color: -> "hsl(#{(rnd 60) - it*20}, #{ 50 - it*it*50}%, 50%)"
+      limit: 10
       speed: 100
-      damp: 0.98
+      damp: 0.95
 
     * size:  5
-      life: -> 0.3 + rnd 0.5
-      color: -> "hsl(60, #{100 - it*100}%, #{rnd 100}%)"
+      life: -> 0.3 + rnd 0.1
+      color: -> "hsl(60, #{100 - it*100}%, 80%)" #{rnd 100}%)"
       limit: 5
       speed: 500
       damp: 0.94
@@ -24,7 +24,7 @@ export class Explosion
     * size:  1
       life: -> rnd 0.5
       color: -> \black
-      limit: 3
+      limit: 2
       speed: 2000
       damp: 0.9
 
@@ -37,30 +37,30 @@ export class Explosion
     life: life
     friction: damp
 
-  (@pos = [-50, 50], @scale = 1) ->
+  (@pos = [-50, 50], @scale = 1, @tint-color = \white) ->
     @particles = [[] [] []]
 
     @state =
       age: 0
-      life: 2 * @scale
+      life: 1.5 + 0.5 * @scale
       alive: yes
 
     for { speed, life, damp, limit }, i in particle-types
-      if i is 2 then limit *= @scale
+      if i is 2 then limit *= @scale * 2
       for p from 0 til limit
-        @particles[i]push new-particle @pos, speed * @scale, damp, @scale * life!
+        @particles[i]push new-particle @pos, speed * @scale, damp, life!*0.5 + @scale/2 * life!
 
   update: (Δt) ->
     for set, type in @particles
       for p in set
-        dampen p, particle-types[type].damp, Δt
+        physics p, Δt
         p.age += Δt
 
     @state.age += Δt
     @state.alive = @state.age < @state.life
 
   draw: (ctx) ->
-    #ctx.ctx.global-composite-operation = \hard-light
+    ctx.ctx.global-composite-operation = \screen
     ctx.ctx.global-composite-operation = \lighter
 
     for set, type in @particles
@@ -68,7 +68,7 @@ export class Explosion
 
       for p in set when p.age < p.life
         ctx.ctx.global-alpha = 1 - p.age/p.life
-        ctx.set-color color p.age/p.life
+        ctx.set-color color p.age/p.life, @tint-color
         ctx.circle p.pos, size * @scale
 
     ctx.ctx.global-alpha = 1

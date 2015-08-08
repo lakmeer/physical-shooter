@@ -148,13 +148,13 @@ export class Laser
   ]
 
   (@pos, @owner) ->
-    @w     = 10
+    @w     = 30
     @box   = new CollisionBox @pos.0, 0, @w, board-size.1 * 2
     @state =
       alive: yes
       age: 0
       life: 1
-      power: 100
+      power: 200
 
   impact: (target, Δt) ->  # Assume target has compatible component
     damage-this-tick = @state.power * Δt
