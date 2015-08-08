@@ -1,7 +1,7 @@
 
-{ id, log, min, floor, v2 } = require \std
+{ id, log, min, wrap, floor, v2 } = require \std
 
-{ CollisionRadius } = require \./collision-box
+{ CollisionRadius, LaserCollider } = require \./collision-box
 
 
 #
@@ -17,9 +17,9 @@ export class Bullet
   ship-colors = [
     -> "rgb(#{ 255 - floor it * 255 }, 0, 0)"
     -> "rgb(0, 0, #{ 255 - floor it * 255 })"
+    -> "rgb(0, #{ 230 - floor it * 230 }, 0)"
     -> "rgb(#{ 255 - floor it * 255 }, 0, #{ 255 - floor it * 255 })"
     -> "rgb(#{ 255 - floor it * 255 }, #{ 128 - floor it * 128 }, 0)"
-    -> "rgb(0, #{ 230 - floor it * 230 }, 0)"
     -> p = 240 - floor it * 240; "rgb(#p,#p,#p)"
   ]
 
@@ -143,33 +143,22 @@ export class Laser
   { board-size } = require \config
 
   ship-colors = [
-    -> "rgb(#{ 255 - floor it * 255 }, 0, 0)"
-    -> "rgb(0, 0, #{ 255 - floor it * 255 })"
-    -> "rgb(#{ 255 - floor it * 255 }, 0, #{ 255 - floor it * 255 })"
+    (p, i) -> "rgb(255, #{ 255 - floor p * 255 }, #{ 255 - floor p * 255 })"
+    (p, i) -> "rgb(#{ 50 + 250 - floor p * 250 }, #{ 50 + 250 - floor p * 250 }, 255)"
+    (p, i) -> "rgb(#{ 255 - floor p * 255 }, 255, #{ 255 - floor p * 255 })"
   ]
 
-  class LaserCollider
-    (@x, @y, @w) ->
-      @colliding = no
-    move-to: ([ @x, @y ]) ->
-    intersects: ({ x, y, rad }:target) ->
-      inside-left  = x > @x - @w/2 - rad
-      inside-right = x < @x + @w/2 + rad
-      above-player = y >= @y - rad
-      @colliding = target.colliding =
-        inside-left and inside-right and above-player
-    draw: (ctx) ->
-      ctx.set-line-color if @colliding then \red else \white
-      ctx.stroke-rect [ @x - @w/2, board-size.1 ], [ @w, board-size.1 - @y ]
-
   (@pos, @owner) ->
-    @w     = 50
+    @w     = 100
     @box   = new LaserCollider @pos.0, @pos.1, @w
     @state =
       alive: yes
       age: 0
-      life: 1
+      life: 2
       power: 200
+
+    @charge-time = 0.5
+    @phase = 1
 
   impact: (target, Δt) ->  # Assume target has compatible component
     damage-this-tick = @state.power * Δt
@@ -178,21 +167,55 @@ export class Laser
     @state.spent += damage-this-tick
     @state.hit = true
 
-  derive-color: (p) ->
-    ship-colors[@owner.index] p
+  derive-color: (p, i) ->
+    ship-colors[@owner.index] p, i
 
-  update: (Δt, pos) ->
+  update: (Δt, pos = @pos) ->
     @pos.0 = pos.0
     @pos.1 = pos.1
     @box.move-to @pos
     @state.age += Δt
-    return @state.alive and @state.age < @state.life
+
+    if @phase is 1 and @state.age >= @charge-time
+      @phase = 2
+      @box.disabled = no
+      @state.age %= @charge-time
+
+    if @phase is 2
+      p = @state.age / @state.life
+      @box.set-width @w * (1 - p*p*p)
+
+      if @state.age >= @state.life
+        @state.age %= @state.life
+        @phase += 1
+
+    return @state.alive and @state.age < @state.life and @phase < 3
 
   draw: ->
-    p = @state.age / @state.life
-    it.set-color @derive-color p
-    it.ctx.global-alpha = 1 - p
-    it.rect [@pos.0 - @w/2, board-size.1 ], [ @w, board-size.1 - @pos.1 ]
+    if @phase is 1
+      @draw-phase-a it
+    else
+      @draw-phase-b it
+
+  draw-phase-a: ->
+    p = @state.age / @charge-time
+    it.ctx.global-alpha = p*p
+    it.ctx.global-composite-operation = \lighter
+    it.set-color @derive-color 1 - p
+    it.circle @pos, @w * 20 * (1 - p*p*p)
     it.ctx.global-alpha = 1
-    #@box.draw it
+    it.ctx.global-composite-operation = \source-over
+
+  draw-beam: (ctx, w, color) ->
+    ctx.set-color color
+    ctx.semi-circle @pos, w
+    ctx.rect [@pos.0 - w/2, board-size.1 + 20 ], [ w, board-size.1 - @pos.1 + 20 ]
+
+  draw-phase-b: ->
+    p = @state.age / @state.life
+    it.ctx.global-composite-operation = \lighter
+    @draw-beam it, @w * (1 - p*p*p), @derive-color p
+    @draw-beam it, @w * (1 -  p*p ), \grey
+    @draw-beam it, @w * (1 -   p  ), \white
+    it.ctx.global-composite-operation = \source-over
 

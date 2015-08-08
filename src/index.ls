@@ -1,7 +1,7 @@
 
 # Require
 
-{ id, log, min, v2, rnd, floor, wrap, limit } = require \std
+{ id, log, min, v2, rnd, floor, delay, wrap, limit } = require \std
 
 { FrameDriver } = require \./frame-driver
 { Blitter }     = require \./blitter
@@ -47,13 +47,12 @@ class EffectsDriver
 
 blast-force        = 50000
 blast-force-large  = 500000
-attract-force      = -10000
 repulse-force      = 5000
-start-wave-size    = 40
+start-wave-size    = 10
 bullets-per-second = 30
 last-shot-time     = -1
 effects-limit      = 50
-player-count       = 1
+player-count       = 3
 beam-attract-force = -100000
 
 wave-size = do (n = start-wave-size, x = 0) ->* while true => yield [ n += 1, floor x += 0.2 ]
@@ -194,7 +193,7 @@ play-test-frame = (Δt, time) ->
 
   # Update players and their bullets
   for player in players
-    player.dont-auto-move!
+    #player.dont-auto-move!
     player.update Δt, time
     for bullet in player.bullets
       enemy-bin-space.assign-bin bullet
@@ -223,7 +222,8 @@ play-test-frame = (Δt, time) ->
 
   # Check for collisions on the black plane
   for player in players
-    player.shoot!
+    unless player.forcefield-active or player.beam-vortex-active
+      player.shoot!
 
     for other in player-bin-space.get-bin-collisions player
       if player.damage.health > 0 and other.box.intersects player.box
@@ -254,11 +254,12 @@ play-test-frame = (Δt, time) ->
   enemies := enemies.filter (.damage.alive)
 
 
+# Test explosion particles
+
 effects-b = new EffectsDriver
 scales = [ 1 2 3 4 5 ]
 scale-index = -1
 
-# Test explosion particles
 explosion-test-frame = (Δt, time) ->
   shaker.update Δt
   effects.update Δt, time
@@ -279,13 +280,16 @@ explosion-test-frame = (Δt, time) ->
 
 
 # Test forcefield effect
+
 forcefield-test-frame = (Δt, time) ->
   player.dont-auto-move!
   player.move-to [0 0]
   backdrop.update Δt, time
   player.update Δt, time
 
+
 # Test crowd avoidance
+
 new-crowd = (n) ->
   [ small ] = wave-size.next!value
   for i from 0 til small
@@ -293,7 +297,6 @@ new-crowd = (n) ->
     pos = [0 0]
     enemy = new Enemy pos
     enemies.push enemy
-
 
 crowding-test-frame = (Δt, time) ->
   crowd-bin-space.clear!
@@ -317,6 +320,43 @@ crowding-test-frame = (Δt, time) ->
     if player.forcefield-active and not player.dead
       emit-force-blast repulse-force, player, enemies, Δt
       shaker.trigger 5/player-count, 0.1
+
+
+# Test laser effect
+
+class Timer
+  (@target, @active = no) ->
+    @current = 0
+
+  update: (Δt, time) ->
+    if @active
+      @current += Δt
+
+      if @current > @target
+        @current %= @target
+        @active = no
+
+  get-progress: ->
+    @current/@target
+
+
+{ Laser } = require \./bullet
+
+laser-timer = new Timer 4
+
+laser-effect-frame = (Δt, time) ->
+
+  shaker.update Δt
+  laser-timer.update Δt
+
+  if not laser-timer.active
+    players.0.laser shaker
+    laser-timer.active = yes
+
+  for player, i in players
+    player.update Δt, time
+    player.dont-auto-move!
+    #player.move-to [ (-2.5 + i) * 50, -board-size.1 + 50 ]
 
 
 render-frame = (frame) ->
@@ -349,7 +389,7 @@ document.add-event-listener \keydown, ({ which }:event) ->
   | ESCAPE => frame-driver.toggle!
   | SPACE  => players.map (.forcefield-active = yes)
   | ENTER  => players.map (.unkill!)
-  | KEY_Z  => players.map (.laser!)
+  | KEY_Z  => players.map (.laser shaker)
   | KEY_C  => players.map (.beam-vortex-active = yes)
   | KEY_X  => players.map (.magnet-active = yes)
   | _  => return event
@@ -375,7 +415,7 @@ main-canvas.canvas.add-event-listener \mousemove, ({ pageX, pageY }) ->
     player.dont-auto-move!
 
 
-# Init
+# Init - default play-test-frame
 
 frame-driver = new FrameDriver
 frame-driver.on-frame render-frame

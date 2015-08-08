@@ -1,5 +1,5 @@
 
-{ id, log, tau, floor } = require \std
+{ id, log, pi, tau, floor } = require \std
 { test } = require \test
 
 #
@@ -75,6 +75,15 @@ export class Blitter
     @ctx.arc x, y, rad, 0, tau
     @ctx.close-path!
     @ctx.fill!
+
+  semi-circle: (pos, diam) ->
+    [ x, y ] = @game-space-to-screen-space pos
+    [ rad ] = @game-size-to-screen-size [ diam/2, 0 ]
+    @ctx.begin-path!
+    @ctx.arc x, y, rad, 0, pi
+    @ctx.close-path!
+    @ctx.fill!
+
 
   stroke-circle: (pos, diam) ->
     [ x, y ] = @game-space-to-screen-space pos

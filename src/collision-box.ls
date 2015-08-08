@@ -3,7 +3,7 @@
 
 { test } = require \test
 
-intersect-box-with-radius = ({ left, right, top, bottom }, { x, y, rad }) ->
+{ board-size } = require \config
 
 
 #
@@ -30,6 +30,37 @@ export class CollisionRadius
     yy = @y - y
     dist = sqrt xx * xx + yy * yy
     @colliding = target.colliding = dist < @rad + rad
+
+
+#
+# Laser Collider
+#
+# Special collision mode for laser beams
+#
+
+export class LaserCollider
+  (@x, @y, @w) ->
+    @colliding = no
+    @disabled = yes
+
+  move-to: ([ @x, @y ]) ->
+
+  intersects: ({ x, y, rad }:target) ->
+    if @disabled then return false
+    inside-left  = x > @x - @w/2 - rad
+    inside-right = x < @x + @w/2 + rad
+    above-player = y >= @y - rad
+    @colliding = target.colliding =
+      inside-left and inside-right and above-player
+
+  set-width: (@w) ->
+
+  draw: (ctx) ->
+    ctx.set-line-color do
+      if      @disabled  then \black
+      else if @colliding then \red
+      else \white
+    ctx.stroke-rect [ @x - @w/2, board-size.1 ], [ @w, board-size.1 - @y ]
 
 
 #

@@ -15,9 +15,9 @@ lumin = sprite \/assets/ship-luminosity.svg, 200
 color-schemes = [
   <[ darkred lightblue darkred ]>
   <[ darkblue lightblue royalblue ]>
+  <[ darkgreen lightblue forestgreen ]>
   <[ purple lightblue magenta ]>
   <[ orangered lightblue orange ]>
-  <[ darkgreen lightblue forestgreen ]>
   <[ white lightblue white ]>
 ]
 
@@ -47,9 +47,9 @@ export class Player
   ship-colors = [
     -> "rgb(#{ 255 - floor it * 255 }, 0, 0)"
     -> "rgb(0, 0, #{ 255 - floor it * 255 })"
+    -> "rgb(0, #{ 230 - floor it * 230 }, 0)"
     -> "rgb(#{ 255 - floor it * 255 }, 0, #{ 255 - floor it * 255 })"
     -> "rgb(#{ 255 - floor it * 255 }, #{ 128 - floor it * 128 }, 0)"
-    -> "rgb(0, #{ 230 - floor it * 230 }, 0)"
     -> p = 230 - floor it * 230; "rgb(#p,#p,#p)"
   ]
 
@@ -146,16 +146,21 @@ export class Player
 
   shoot: ->
     if @dead then return
-    if @bullet-timer.active is no
+    if @laser-timer.active then return
+    if not @bullet-timer.active
       @bullets.push new Bullet [ @pos.0 - 3, @pos.1 + 5 ], this
       @bullets.push new Bullet [ @pos.0 + 3, @pos.1 + 5 ], this
       @bullet-timer.active = yes
 
-  laser: ->
+  laser: (shaker) ->
     if @dead then return
     if @laser-timer.active is no
       @lasers.push new Laser [ @pos.0, @pos.1 ], this
       @laser-timer.active = yes
+      if shaker?
+        shaker.trigger-after 0.5, 10, 2.5
+      return true
+    return false
 
   dont-auto-move: ->
     @auto-move = no

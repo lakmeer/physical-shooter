@@ -1,5 +1,5 @@
 
-{ id, log, rnd } = require \std
+{ id, log, rnd, delay } = require \std
 
 export class ScreenShake
 
@@ -32,6 +32,9 @@ export class ScreenShake
 
   trigger: (amount, time) ->
     @sources.push @create-source amount, time
+
+  trigger-after: (wait, amount, time) ->
+    delay wait*1000, this.trigger.bind this, amount, time
 
   get-offset: ->
     @offset
