@@ -13,7 +13,7 @@
 export class FrameDriver
 
   readout = document.create-element \pre
-  readout.style <<< { position: \absolute, color: \white, top: 0, right: 0 }
+  readout.style <<< { position: \absolute, top: 0, right: 0 }
   document.body.append-child readout
 
   tps-history-window = 20

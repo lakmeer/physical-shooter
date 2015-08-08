@@ -12,27 +12,20 @@
 
 lumin = sprite \/assets/ship-luminosity.svg, 200
 
-color-map-ix = 3
-
 color-schemes = [
-  [ \darkred, \lightblue, \pink ]
-  [ \darkblue, \lightblue, \royalblue ]
-  [ \purple, \lightblue, \magenta ]
-  [ \orangered, \lightblue, \orange ]
-  [ \darkgreen, \lightblue, \forestgreen ]
+  <[ darkred lightblue darkred ]>
+  <[ darkblue lightblue royalblue ]>
+  <[ purple lightblue magenta ]>
+  <[ orangered lightblue orange ]>
+  <[ darkgreen lightblue forestgreen ]>
+  <[ white lightblue white ]>
 ]
 
-red    = palette-sprite \/assets/ship-colormap.svg, \/assets/ship-luminosity.svg, color-schemes.0, 200
-blue   = palette-sprite \/assets/ship-colormap.svg, \/assets/ship-luminosity.svg, color-schemes.1, 200
-pink   = palette-sprite \/assets/ship-colormap.svg, \/assets/ship-luminosity.svg, color-schemes.2, 200
-orange = palette-sprite \/assets/ship-colormap.svg, \/assets/ship-luminosity.svg, color-schemes.3, 200
-green  = palette-sprite \/assets/ship-colormap.svg, \/assets/ship-luminosity.svg, color-schemes.4, 200
+color-map = \/assets/ship-colormap.svg
+lumin-map = \/assets/ship-luminosity.svg
 
-
-color-map-src = \/assets/ship-colormap.svg
-lumin-map-src = \/assets/ship-luminosity.svg
-
-ship-sprites = [ red, blue, pink, orange, green ]
+ship-sprites = color-schemes.map (palette) ->
+  palette-sprite color-map, lumin-map, palette, 200
 
 
 #
@@ -56,6 +49,7 @@ export class Player
     -> "rgb(#{ 255 - floor it * 255 }, 0, #{ 255 - floor it * 255 })"
     -> "rgb(#{ 255 - floor it * 255 }, #{ 128 - floor it * 128 }, 0)"
     -> "rgb(0, #{ 230 - floor it * 230 }, 0)"
+    -> p = 230 - floor it * 230; "rgb(#p,#p,#p)"
   ]
 
   (@index) ->
@@ -96,8 +90,9 @@ export class Player
     if @dead then return
     if @auto-move
       m = Math.sin time + @index * pi / 3
-      n = Math.sin time * 3
-      @pos.0 = board-size.0*0.99 * m * Math.abs(m)
+      g = Math.cos time + @index * pi / 6
+      @pos.0 = board-size.0 * 0.98 * m # * Math.abs(m)
+      @pos.1 = -board-size.1 + 100 + g * 70
 
     @forcefield-phase += Δt * 40
     @bullets = @bullets.filter (.update Δt)
@@ -137,12 +132,12 @@ export class Player
   shoot: ->
     if @dead then return
     #sfx "PEW!"
-    @bullets.push new Bullet [ @pos.0 - 3, @pos.1 + 5 ], @index
-    @bullets.push new Bullet [ @pos.0 + 3, @pos.1 + 5 ], @index
+    @bullets.push new Bullet [ @pos.0 - 3, @pos.1 + 5 ], this
+    @bullets.push new Bullet [ @pos.0 + 3, @pos.1 + 5 ], this
 
   laser: ->
     if @laser-timer.active is no
-      @lasers.push new Laser [ @pos.0, @pos.1 ], @index
+      @lasers.push new Laser [ @pos.0, @pos.1 ], this
       @laser-timer.active = yes
 
   dont-auto-move: ->

@@ -19,6 +19,7 @@ export v2 =
   add   : (a, b) -> [ a.0 + b.0, a.1 + b.1 ]
   sub   : (a, b) -> [ a.0 - b.0, a.1 - b.1 ]
   scale : (v, f) -> [ v.0 * f, v.1 * f ]
+  dist  : (a, b) -> x = [b.0 - a.0]; y = [b.1 - a.1]; sqrt x*x+y*y
 
 export box = (n) -> [ n, n ]
 

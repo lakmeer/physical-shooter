@@ -30,8 +30,9 @@ export class Enemy
   sprite-offset = sprite-size `v2.scale` 0.5
 
   (@pos = [0 0]) ->
-    @box = new CollisionBox @pos.0, @pos.1, 10, 10
+    @box = new CollisionBox @pos.0, @pos.1, 20, 20
     @bullets = []
+    @type = \small
 
     @vel = [0 0]
     @acc = [0 -50 - rnd 50]
@@ -66,10 +67,11 @@ export class Enemy
     @box.move-to @pos
 
   confine-to-bounds: ->
+    bord-z = board-size.1 * 0.5
     if @pos.0 >  board-size.0 - border then @pos.0 =  board-size.0 - border
     if @pos.0 < -board-size.0 + border then @pos.0 = -board-size.0 + border
     if @pos.1 >  board-size.1 - border then @pos.1 =  board-size.1 - border
-    if @pos.1 < -board-size.1 + border + 50 then @pos.1 = -board-size.1 + border + 50
+    if @pos.1 < -board-size.1 + bord-z then @pos.1 = -board-size.1 + bord-z
 
   move-to: (@pos) ->
     @box.move-to @pos
@@ -107,7 +109,7 @@ export class BigEnemy
   (@pos = [0 0]) ->
     @box = new CollisionBox @pos.0, @pos.1, 50, 30
     @bullets = []
-
+    @type = \large
     @vel = [0 0]
     @acc = [0 -50 - rnd 50]
 
@@ -168,6 +170,4 @@ export class BigEnemy
     bullet.vel = bearing `v2.scale` 100
     bullet.acc = [ 0 0 ]
     @bullets.push bullet
-
-
 

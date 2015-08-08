@@ -12,14 +12,14 @@ export class Blitter
 
   { screen-size, board-size, scale-factor } = require \config
 
-  (@size = screen-size, @bs = board-size) ->
+  (@size = screen-size, @bs = board-size, @scale = scale-factor) ->
     @canvas = document.create-element \canvas
     @ctx    = @canvas.get-context \2d
 
     @canvas.width  = @size.0
     @canvas.height = @size.1
     @canvas.style.display = \block
-    @canvas.style.transform = "scale(#scale-factor)"
+    @canvas.style.transform = "scale(#{@scale})"
     @canvas.style.transform-origin = "0% 0%"
 
     @offset = [0 0]
@@ -96,14 +96,14 @@ export class Blitter
     [ w * 0.5 * @size.0/@bs.0, h * 0.5 * @size.1/@bs.1 ]
 
   screen-size-to-game-size: ([ w, h ]) ->
-    [ w * 2 * @bs.0/@size.0 / scale-factor, h * 2 * @bs.1/@size.1 * scale-factor ]
+    [ w * 2 * @bs.0/@size.0 / @scale, h * 2 * @bs.1/@size.1 * @scale ]
 
   game-space-to-screen-space: ([ x, y ]) ->
     [ @size.0/2 + @size.0/2 * x/@bs.0 + @offset.0,
       @size.1/2 - @size.1/2 * y/@bs.1 + @offset.1 ]
 
   screen-space-to-game-space: ([ x, y ]) ->
-    [ x * @bs.0 * 2/@size.0 / scale-factor - @bs.0, @bs.1 - y * @bs.1 * 2/@size.1 / scale-factor ]
+    [ x * @bs.0 * 2/@size.0 / @scale - @bs.0, @bs.1 - y * @bs.1 * 2/@size.1 / @scale ]
 
   set-offset: ([ x, y ]) ->
     @offset.0 = x
@@ -115,7 +115,7 @@ export class Blitter
 #
 
 test "Blitter - Game space to screen space", ->
-  blitter = new Blitter [ 100, 100 ], [ 100, 100 ]
+  blitter = new Blitter [ 100, 100 ], [ 100, 100 ], 1
 
   @equal-v2 'Origin is in the center'
     .expect blitter.game-space-to-screen-space [ 0, 0 ]
@@ -139,7 +139,7 @@ test "Blitter - Game space to screen space", ->
 
 
 test "Blitter - Screen space to game space", ->
-  blitter = new Blitter [ 100, 100 ], [ 100, 100 ]
+  blitter = new Blitter [ 100, 100 ], [ 100, 100 ], 1
 
   @equal-v2 'Origin is in the center'
     .expect blitter.screen-space-to-game-space [ 50, 50 ]

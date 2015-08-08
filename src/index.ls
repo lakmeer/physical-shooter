@@ -5,6 +5,7 @@
 
 { FrameDriver } = require \./frame-driver
 { Blitter }     = require \./blitter
+{ BinSpace }    = require \./bin-space
 
 { Player }            = require \./player
 { Backdrop }          = require \./backdrop
@@ -15,6 +16,22 @@
 { ScreenShake }  = require \./screen-shake
 { Explosion }    = require \./explosion
 { Wreckage }     = require \./wreckage
+
+
+class EffectsDriver
+  (@limit) ->
+    @effects = []
+
+  push: (effect) ->
+    if @effects.length >= @limit
+      @effects.shift!
+    @effects.push effect
+
+  update: (Δt, time) ->
+    @effects = @effects.filter (.update Δt, time)
+
+  draw: (ctx) ->
+    @effects.map (.draw ctx)
 
 
 # Config
@@ -65,27 +82,30 @@ document.add-event-listener \mousemove, ({ pageX, pageY }) ->
 # Init
 
 blast-force        = 50000
+blast-force-large  = 500000
 attract-force      = -10000
-repulse-force      = 10000
-start-wave-size    = 3
+repulse-force      = 2000
+start-wave-size    = 100
 bullets-per-second = 30
 last-shot-time     = -1
+effects-limit      = 50
+player-count       = 6
 
-player-count = 5
+wave-size = do (n = start-wave-size, x = 0) ->* while true => yield [ n += 5, x += 1 ]
 
-effects  = []
-enemies  = []
-players  = [ new Player i for i from 0 til player-count ]
-stray-collections = []
+shaker           = new ScreenShake
+effects          = new EffectsDriver effects-limit
+backdrop         = new Backdrop
+main-canvas      = new Blitter
+enemy-bin-space  = new BinSpace 40, 20, \white
+player-bin-space = new BinSpace 40, 20, \black
 
-wave-size = do (n = start-wave-size, x = 0) ->* while true => yield [ n += 1, 0 ] # x += 1 ]
+players = [ new Player i for i from 0 til player-count ]
+enemies = []
+pickups = []
 
-#player   = new Player
-shaker   = new ScreenShake
-backdrop = new Backdrop
-
-main-canvas = new Blitter
 main-canvas.install document.body
+
 
 
 # Homeless functions
@@ -94,12 +114,10 @@ emit-force-blast = (force, self, others, Δt) ->
 
   [ x, y ] = self.pos
 
-  limiter = if force < 0 then limit force, 0 else limit 0, force
-
   blast = (target) ->
     xx  = x - target.pos.0
     yy  = y - target.pos.1
-    d   = Math.sqrt( xx * xx + yy * yy )
+    d   = v2.dist target.pos, self.pos
     ids = if d is 0 then 0 else 1 / (d*d)
     push = [ force * -xx * ids * Δt, force * -yy * ids * Δt]
     target.vel = target.vel `v2.add` push
@@ -124,69 +142,78 @@ new-wave = (n) ->
     enemy.fire-target = players.0
     enemies.push enemy
 
+find-target = (enemy) ->
+  if not players.0.dead
+    enemy.fire-target = players.0
+
+check-destroyed = (enemy, owner, Δt) ->
+  if enemy.damage.health <= 0 and enemy.damage.alive
+    enemy.damage.alive = no
+    shaker.trigger 5, 0.2
+    pickups.push new CollectableStream enemy.bullets, owner
+    effects.push new Explosion enemy.pos
+    effects.push new Wreckage enemy.pos, enemy.wreckage-sprite
+    force = if enemy.type is \large then blast-force-large else blast-force
+    emit-force-blast force, enemy, enemies, Δt
+
 
 
 # Tick functions
 
 play-test-frame = (Δt, time) ->
 
+  # Scale time if needed
   Δt   *= time-factor
   time *= time-factor
 
+  # Update scene features
   backdrop.update Δt, time
   shaker.update Δt
-  players.map (.update Δt, time)
+  effects.update Δt, time
 
-  stray-collections := stray-collections.filter (.update Δt, time)
-  effects.map (.update Δt, time)
+  # Update autonomous moving things
+  pickups := pickups.filter (.update Δt, time)
 
+  # Prepare for simulation
+  enemy-bin-space.clear!
+  player-bin-space.clear!
+
+  # Spawn new enemies if we've run out
   if enemies.length < 1
     new-wave wave-size
 
+  # Update players and their bullets
+  for player in players
+    player.update Δt, time
+    for bullet in player.bullets
+      enemy-bin-space.assign-bin bullet
+
+  # Update enemies and their bullets
   for enemy in enemies
     if enemy.damage.alive
       enemy.update Δt, time
-
-      if not players.0.dead
-        enemy.fire-target = players.0
+      find-target enemy
 
       for bullet in enemy.bullets
-        for player in players
-          if player.damage.health > 0 and bullet.box.intersects player.box
-            bullet.impact player, Δt
+        player-bin-space.assign-bin bullet
 
-      for player in players
-        for laser in player.lasers
-          if laser.box.intersects enemy.box
-            laser.impact enemy, Δt
-            enemy.last-hit = player
+  # Check for collision on the white plane
+  for enemy in enemies
+    for other in enemy-bin-space.get-bin-collisions enemy
+      if other.box.intersects enemy.box
+        if other.impact?
+          other.impact enemy, Δt
+          check-destroyed enemy, other.owner, Δt
 
-        for bullet in player.bullets
-          if bullet.box.intersects enemy.box
-            bullet.impact enemy, Δt
-            enemy.last-hit = player
-
-      if enemy.damage.health <= 0
-        enemy.damage.alive = no
-        shaker.trigger 5, 0.2
-
-        owner = enemy.last-hit
-        stray-collections.push new CollectableStream enemy.bullets, owner
-        effects.push new Explosion enemy.pos
-        effects.push new Wreckage enemy.pos, enemy.wreckage-sprite
-        emit-force-blast blast-force, enemy, enemies, Δt
-        emit-force-blast blast-force, enemy, enemy.bullets, Δt
-
-
+  # Check for collisions on the black plane
   for player in players
+    for other in player-bin-space.get-bin-collisions player
+      if player.damage.health > 0 and other.box.intersects player.box
+        other.impact? player, Δt
+
     if player.forcefield-active and not player.dead
       emit-force-blast repulse-force, player, enemies, Δt
-      #emit-force-blast repulse-force, player, strays
       shaker.trigger 5/player-count, 0.1
-
-    #if player.magnet-active and not player.dead
-      #emit-force-blast attract-force, player, strays, Δt
-      #shaker.trigger 2/player-count, 0.1
 
     if player.damage.health <= 0 and not player.dead
       effects.push new Explosion player.pos
@@ -194,8 +221,15 @@ play-test-frame = (Δt, time) ->
       for enemy in enemies
         enemy.fire-target = null
 
+    for laser in player.lasers
+      for enemy in enemies
+        if laser.box.intersects enemy.box
+          laser.impact enemy, Δt
+          enemy.last-hit = player
+          check-destroyed enemy, player, Δt
+
+
   enemies := enemies.filter (.damage.alive)
-  effects := effects.filter (.state.alive)
 
   new-shot-time = floor time * bullets-per-second
 
@@ -206,15 +240,12 @@ play-test-frame = (Δt, time) ->
         for i from 0 til to-fire => player.shoot!
       last-shot-time := new-shot-time
 
-
 explosion-test-frame = (Δt, time) ->
   Δt   *= time-factor
   time *= time-factor
 
   shaker.update Δt
-
-  effects.map (.update Δt, time)
-  effects := effects.filter (.state.alive)
+  effects.update Δt, time
 
   new-shot-time = floor time/2
 
@@ -234,13 +265,15 @@ forcefield-test-frame = (Δt, time) ->
 render-frame = (frame) ->
   main-canvas.clear!
   main-canvas.set-offset shaker.get-offset!
-  backdrop.draw main-canvas
+  #backdrop.draw main-canvas
+  effects.draw main-canvas
 
-  stray-collections.map  (.draw main-canvas)
-  effects.map (.draw main-canvas)
+  #enemy-bin-space.draw main-canvas
+  #player-bin-space.draw main-canvas
+
+  pickups.map (.draw main-canvas)
   enemies.map (.draw main-canvas)
   players.map (.draw main-canvas)
-
 
 frame-driver = new FrameDriver
 frame-driver.on-frame render-frame

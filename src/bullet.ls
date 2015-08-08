@@ -20,9 +20,10 @@ export class Bullet
     -> "rgb(#{ 255 - floor it * 255 }, 0, #{ 255 - floor it * 255 })"
     -> "rgb(#{ 255 - floor it * 255 }, #{ 128 - floor it * 128 }, 0)"
     -> "rgb(0, #{ 230 - floor it * 230 }, 0)"
+    -> p = 240 - floor it * 240; "rgb(#p,#p,#p)"
   ]
 
-  (@pos, @index) ->
+  (@pos, @owner) ->
     @vel = [0 0]
     @acc = [(100 * Math.random! - 50), 1000]
     @w     = 2
@@ -31,19 +32,23 @@ export class Bullet
       alive: yes
       hit: no
       spent: 0
-      quota: 8
-      power: 40
+      quota: 1
+      power: 20
 
   impact: (target, Δt) ->  # Assume target has compatible component
     damage-this-tick = @state.power * Δt
     target.damage.health -= damage-this-tick
-    target.vel.1 += 10  # knockback
+    if target.type? is \small
+      target.vel.1 += 10  # knockback
+    else
+      target.vel.1 += 1  # knockback
+
     @state.spent += damage-this-tick
     @state.hit = true
 
   derive-color: ->
     p = @state.spent/@state.quota
-    ship-colors[@index] p
+    ship-colors[@owner.index] p
 
   update: (Δt) ->
     @vel = (@acc `v2.scale` Δt) `v2.add` @vel
@@ -64,9 +69,8 @@ export class Bullet
 
 export class EnemyBullet
 
-  max-speed = 100
   range = 10
-  collection-ramp-up = 5
+  collection-ramp-up = 25
 
   { board-size } = require \config
 
@@ -116,8 +120,7 @@ export class EnemyBullet
       owner.collect this
       return false
 
-    speed = min dist, @collection-speed + collection-ramp-up * Δt
-    @collection-speed = min max-speed, speed
+    @collection-speed = min dist, @collection-speed + collection-ramp-up * Δt
     dir  = v2.norm diff
     jump = dir `v2.scale` @collection-speed
     @pos = @pos `v2.add` jump
@@ -130,6 +133,10 @@ export class EnemyBullet
     if @stray then it.ctx.global-alpha = 1
 
 
+#
+# Laser Beam Weapon
+#
+
 export class Laser
 
   { board-size } = require \config
@@ -140,7 +147,7 @@ export class Laser
     -> "rgb(#{ 255 - floor it * 255 }, 0, #{ 255 - floor it * 255 })"
   ]
 
-  (@pos, @index) ->
+  (@pos, @owner) ->
     @w     = 10
     @box   = new CollisionBox @pos.0, 0, @w, board-size.1 * 2
     @state =
@@ -157,7 +164,7 @@ export class Laser
     @state.hit = true
 
   derive-color: (p) ->
-    ship-colors[@index] p
+    ship-colors[@owner.index] p
 
   update: (Δt, pos) ->
     @pos.0 = pos.0

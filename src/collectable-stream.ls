@@ -1,4 +1,6 @@
 
+{ id, log } = require \std
+
 export class CollectableStream
   (@items, @owner) ->
     for item in @items
