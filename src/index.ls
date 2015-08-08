@@ -1,7 +1,7 @@
 
 # Require
 
-{ id, log, v2, rnd, floor, limit } = require \std
+{ id, log, min, v2, rnd, floor, limit } = require \std
 
 { FrameDriver } = require \./frame-driver
 { Blitter }     = require \./blitter
@@ -39,42 +39,6 @@ class EffectsDriver
 { board-size, time-factor } = require \config
 
 
-# Listen
-
-KEY_Z = 90
-KEY_X = 88
-KEY_C = 67
-SPACE = 32
-ESCAPE = 27
-
-document.add-event-listener \keydown, ({ which }:event) ->
-  switch which
-  | SPACE  => players.map (.forcefield-active = yes)
-  | ESCAPE => frame-driver.toggle!
-  | KEY_Z  => players.map (.unkill!)
-  | KEY_X  => players.map (.magnet-active = yes)
-  | _  => return event
-  event.prevent-default!
-  return false
-
-document.add-event-listener \keyup, ({ which }:event) ->
-  switch which
-  | SPACE => players.map (.forcefield-active = no)
-  | KEY_X => players.map (.magnet-active = no)
-  | _  => return event
-  event.prevent-default!
-  return false
-
-document.add-event-listener \mousemove, ({ pageX, pageY }) ->
-  for player, i in players
-    mouse = [ pageX, pageY ]
-    #if i > 0 then mouse.0 = window.inner-width - pageX
-    #if i > 1 then return
-    dest = main-canvas.screen-space-to-game-space mouse
-    player.move-to dest
-    player.dont-auto-move!
-
-
 # Game play note:
 # Initialising a force weapon cost more than running it for longer -
 # rapidly switching force weapons will use twoce as much as sustained use
@@ -84,8 +48,8 @@ document.add-event-listener \mousemove, ({ pageX, pageY }) ->
 blast-force        = 50000
 blast-force-large  = 500000
 attract-force      = -10000
-repulse-force      = 2000
-start-wave-size    = 100
+repulse-force      = 5000
+start-wave-size    = 10
 bullets-per-second = 30
 last-shot-time     = -1
 effects-limit      = 50
@@ -99,6 +63,7 @@ backdrop         = new Backdrop
 main-canvas      = new Blitter
 enemy-bin-space  = new BinSpace 40, 20, \white
 player-bin-space = new BinSpace 40, 20, \black
+crowd-bin-space  = new BinSpace 40, 20, \red
 
 players = [ new Player i for i from 0 til player-count ]
 enemies = []
@@ -110,6 +75,8 @@ main-canvas.install document.body
 
 # Homeless functions
 
+ids = -> if it is 0 then 0 else 1 / (it*it)
+
 emit-force-blast = (force, self, others, Δt) ->
 
   [ x, y ] = self.pos
@@ -118,8 +85,7 @@ emit-force-blast = (force, self, others, Δt) ->
     xx  = x - target.pos.0
     yy  = y - target.pos.1
     d   = v2.dist target.pos, self.pos
-    ids = if d is 0 then 0 else 1 / (d*d)
-    push = [ force * -xx * ids * Δt, force * -yy * ids * Δt]
+    push = [ force * -xx * ids(d) * Δt, force * -yy * ids(d) * Δt]
     target.vel = target.vel `v2.add` push
 
   for other in others when other isnt self
@@ -130,20 +96,24 @@ emit-force-blast = (force, self, others, Δt) ->
 
 new-wave = (n) ->
   [ small, big ] = wave-size.next!value
+
+  x = -board-size.0 + 10 + (rnd board-size.0 * 2 - 10)
+  y = board-size.1 - rnd (board-size.1/2 - 10)
+
   for i from 0 til small
-    pos = [ -board-size.0 + 10 + (rnd board-size.0 * 2 - 10), board-size.1 - rnd (board-size.1/2 - 10) ]
-    enemy = new Enemy pos
+    enemy = new Enemy [ x, y ]
     enemy.fire-target = players.0
     enemies.push enemy
 
   for i from 0 til big
-    pos = [ -board-size.0 + 10 + (rnd board-size.0 * 2 - 10), board-size.1 - rnd (board-size.1/2 - 10) ]
-    enemy = new BigEnemy pos
+    enemy = new BigEnemy [ x,y ]
     enemy.fire-target = players.0
     enemies.push enemy
 
 find-target = (enemy) ->
-  if not players.0.dead
+  if player-count is 0
+    enemy.fire-target = null
+  else if not players.0.dead
     enemy.fire-target = players.0
 
 check-destroyed = (enemy, owner, Δt) ->
@@ -156,6 +126,20 @@ check-destroyed = (enemy, owner, Δt) ->
     force = if enemy.type is \large then blast-force-large else blast-force
     emit-force-blast force, enemy, enemies, Δt
 
+de-crowd = (self, others) ->
+  max-speed = 5
+  effective-distance = if self.type is \large then 100 else 25
+  for other in others
+    diff = v2.sub other.pos, self.pos
+    dist = v2.hyp diff
+    dir  = v2.norm diff
+    if dist < effective-distance
+      x = dir.0 * max-speed * ( dist/effective-distance)
+      y = dir.1 * max-speed * (dist/effective-distance)
+      #self.vel.0 -= x - 0.5 + rnd 1
+      #self.vel.1 -= y - 0.5 + rnd 1
+      other.vel.0 += x * 1.5 - 0.5 + rnd 1
+      other.vel.1 += y * 1.0 - 0.5 + rnd 1
 
 
 # Tick functions
@@ -176,6 +160,7 @@ play-test-frame = (Δt, time) ->
 
   # Prepare for simulation
   enemy-bin-space.clear!
+  crowd-bin-space.clear!
   player-bin-space.clear!
 
   # Spawn new enemies if we've run out
@@ -190,12 +175,17 @@ play-test-frame = (Δt, time) ->
 
   # Update enemies and their bullets
   for enemy in enemies
+    crowd-bin-space.assign-bin enemy
     if enemy.damage.alive
       enemy.update Δt, time
       find-target enemy
 
       for bullet in enemy.bullets
         player-bin-space.assign-bin bullet
+
+  # De-crowd enemies
+  for enemy in enemies
+    de-crowd enemy, crowd-bin-space.get-bin-collisions enemy
 
   # Check for collision on the white plane
   for enemy in enemies
@@ -261,19 +251,91 @@ forcefield-test-frame = (Δt, time) ->
   backdrop.update Δt, time
   player.update Δt, time
 
+new-crowd = (n) ->
+  [ small ] = wave-size.next!value
+  for i from 0 til small
+    pos = [ (rnd 100), (rnd 100) ]
+    pos = [0 0]
+    enemy = new Enemy pos
+    enemies.push enemy
+
+crowding-test-frame = (Δt, time) ->
+
+  crowd-bin-space.clear!
+
+  # Spawn new enemies if we've run out
+  if enemies.length < 1
+    new-crowd wave-size
+
+  # Update enemies and their bullets
+  for enemy in enemies
+    crowd-bin-space.assign-bin enemy
+    if enemy.damage.alive
+      enemy.update Δt, time
+
+  # De-crowd enemies
+  for enemy in enemies
+    de-crowd enemy, crowd-bin-space.get-bin-collisions enemy
+
+  # Check for collisions on the black plane
+  for player in players
+    if player.forcefield-active and not player.dead
+      emit-force-blast repulse-force, player, enemies, Δt
+      shaker.trigger 5/player-count, 0.1
+
 
 render-frame = (frame) ->
   main-canvas.clear!
   main-canvas.set-offset shaker.get-offset!
-  #backdrop.draw main-canvas
+  backdrop.draw main-canvas
   effects.draw main-canvas
 
   #enemy-bin-space.draw main-canvas
   #player-bin-space.draw main-canvas
+  #crowd-bin-space.draw main-canvas
 
   pickups.map (.draw main-canvas)
   enemies.map (.draw main-canvas)
   players.map (.draw main-canvas)
+
+
+# Listen
+
+KEY_Z = 90
+KEY_X = 88
+KEY_C = 67
+SPACE = 32
+ESCAPE = 27
+
+document.add-event-listener \keydown, ({ which }:event) ->
+  switch which
+  | SPACE  => players.map (.forcefield-active = yes)
+  | ESCAPE => frame-driver.toggle!
+  | KEY_Z  => players.map (.unkill!)
+  | KEY_X  => players.map (.magnet-active = yes)
+  | _  => return event
+  event.prevent-default!
+  return false
+
+document.add-event-listener \keyup, ({ which }:event) ->
+  switch which
+  | SPACE => players.map (.forcefield-active = no)
+  | KEY_X => players.map (.magnet-active = no)
+  | _  => return event
+  event.prevent-default!
+  return false
+
+main-canvas.canvas.add-event-listener \mousemove, ({ pageX, pageY }) ->
+  for player, i in players
+    mouse = [ pageX, pageY ]
+    #if i > 0 then mouse.0 = window.inner-width - pageX
+    #if i > 1 then return
+    dest = main-canvas.screen-space-to-game-space mouse
+    player.move-to dest
+    player.dont-auto-move!
+
+
+# Init
 
 frame-driver = new FrameDriver
 frame-driver.on-frame render-frame
