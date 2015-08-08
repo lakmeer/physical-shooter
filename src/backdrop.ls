@@ -30,7 +30,7 @@ export class Backdrop
 
   draw: (ctx) ->
     ctx.set-line-color @derive-color 0.4
-    for i from -board-size.1 to board-size.1 by @gap
+    for i from -board-size.1 to board-size.1 + @gap by @gap
       y = i - @offset
       ctx.line -board-size.0, y, board-size.0, y
 
@@ -43,7 +43,7 @@ export class Backdrop
 
   update: (Δt, time) ->
     @offset += speed * Δt
-    if @offset >= 20
-      @offset %= 20
+    if @offset >= @gap
+      @offset %= @gap
 
-    @gap = 12 + 2 * Math.sin time/2
+    @gap = 50 + 15 * Math.sin time/2
