@@ -130,8 +130,7 @@ export class Player
     @draw-forcefield ctx if @forcefield-active
     @bullets.map (.draw ctx)
     @lasers.map (.draw ctx)
-    ctx.sprite ship-sprites[@index], @pos, sprite-size, sprite-offset
-    #@box.draw ctx
+    ctx.sprite ship-sprites[@index], @pos, sprite-size, offset: sprite-offset
 
   draw-forcefield: (ctx) ->
     shells = 4

@@ -226,6 +226,7 @@ play-test-frame = (Δt, time) ->
   for player in players
     unless player.forcefield-active or player.beam-vortex-active
       player.shoot!
+      void
 
     for other in player-bin-space.get-bin-collisions player
       if player.damage.health > 0 and other.box.intersects player.box

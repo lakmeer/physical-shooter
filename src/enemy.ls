@@ -53,6 +53,7 @@ export class Enemy
   update: (Δt, time) ->
     @bullets := @bullets.filter (.update Δt)
     @fire-timer.current-time += Δt
+    @point-at-target @fire-target
 
     if @fire-timer.current-time >= @fire-timer.target-time
       @fire-timer.current-time %= @fire-timer.target-time
@@ -62,6 +63,12 @@ export class Enemy
     physics this, Δt
     @confine-to-bounds!
     @box.move-to @pos
+
+  point-at-target: (target = @fire-target) ->
+    if target
+      xx = target.pos.0 - @pos.0
+      yy = target.pos.1 - @pos.1
+      @rotation = Math.asin -xx/v2.hyp [ xx, yy ]
 
   confine-to-bounds: ->
     bord-z = board-size.1 * 0.5
@@ -76,7 +83,7 @@ export class Enemy
   draw: (ctx) ->
     return if not @damage.alive
     @bullets.map (.draw ctx)
-    ctx.sprite small, @pos, sprite-size, sprite-offset
+    ctx.sprite small, @pos, sprite-size, offset: sprite-offset, rotation: @rotation
     #@box.draw ctx
 
   shoot-at: (pos) ->
@@ -126,6 +133,7 @@ export class BigEnemy
     @fire-target = null
 
     @wreckage-sprite = sprite \/assets/chunk-enemy.svg, 100
+    @rotation = 0
 
   update: (Δt, time) ->
     @bullets := @bullets.filter (.update Δt)
@@ -153,13 +161,14 @@ export class BigEnemy
   draw: (ctx) ->
     return if not @damage.alive
     @bullets.map (.draw ctx)
-    ctx.sprite medium, @pos, sprite-size, sprite-offset
+    ctx.sprite medium, @pos, sprite-size, offset: sprite-offset, rotation: @rotation
     #@box.draw ctx
 
   shoot-at: (pos) ->
     xx = pos.0 - @pos.0
     yy = pos.1 - @pos.1
     bearing = v2.norm pos `v2.sub` @pos
+    @rotation = Math.asin -xx/v2.hyp [ xx, yy ]
 
     bullet = new EnemyBullet [ @pos.0 + @w/2, @pos.1 ]
     bullet.vel = bearing `v2.scale` bullet-speed

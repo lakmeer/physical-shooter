@@ -60,7 +60,6 @@ export class Bullet
   draw: ->
     it.set-color @derive-color!
     it.rect [@pos.0 - @w/2, @pos.1 + @w/2], [ @w, @w * (3 + @vel.1/100) ]
-    #@box.draw it
 
 
 #
@@ -126,11 +125,17 @@ export class EnemyBullet
     return true
 
   draw: ->
-    it.set-color @derive-color!
-    if @stray then it.ctx.global-alpha = 0.5
-    it.circle @pos, @w
-    if @stray then it.ctx.global-alpha = 1
-    #@box.draw it
+    if @stray
+      it.ctx.global-alpha = 0.7
+      it.set-color @derive-color!
+      it.circle @pos, @w * 2
+      it.ctx.global-alpha = 0.5
+      it.set-color \white
+      it.circle @pos, @w * 2 * 0.7
+      it.ctx.global-alpha = 1
+    else
+      it.set-color @derive-color!
+      it.circle @pos, @w
 
 
 #

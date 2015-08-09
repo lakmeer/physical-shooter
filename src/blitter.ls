@@ -24,10 +24,13 @@ export class Blitter
 
     @offset = [0 0]
 
+    @rotation = 0
+
   clear: ->
     @ctx.fill-style = \white
     @ctx.stroke-style = \white
     @ctx.clear-rect 0, 0, @size.0, @size.1
+    @rotation += 0.2
 
   set-color: (col) ->
     @ctx.fill-style = col
@@ -35,11 +38,15 @@ export class Blitter
   set-line-color: (col) ->
     @ctx.stroke-style = col
 
-  sprite: (img, pos, size, offset = [0 0]) ->
+  sprite: (img, pos, size, { offset = [0 0], rotation = 0 }={}) ->
     [ x, y ] = @game-space-to-screen-space pos
     [ w, h ] = @game-size-to-screen-size size
     [ u, v ] = @game-size-to-screen-size offset
-    @ctx.draw-image img, x - u, y - v, w, h
+    @ctx.save!
+    @ctx.translate x - u + w/2, y - v + h/2
+    @ctx.rotate rotation
+    @ctx.draw-image img, -w/2, -h/2, w, h
+    @ctx.restore!
 
   rect: (pos, size) ->
     [ x, y ] = @game-space-to-screen-space pos
@@ -83,7 +90,6 @@ export class Blitter
     @ctx.arc x, y, rad, 0, pi
     @ctx.close-path!
     @ctx.fill!
-
 
   stroke-circle: (pos, diam) ->
     [ x, y ] = @game-space-to-screen-space pos
