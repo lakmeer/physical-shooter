@@ -1,5 +1,5 @@
 
-{ id, log, box, floor, physics, rnd, v2 } = require \std
+{ id, log, box, floor, physics, rnd, random-range, v2 } = require \std
 
 { RadialCollider } = require \./collider
 { EnemyBullet }    = require \./bullet
@@ -47,7 +47,6 @@ export class Enemy
 
     @fire-timer  = new Timer fire-rate
     @fire-target = null
-
     @wreckage-sprite = sprite \/assets/chunk-enemy.svg, 100
 
   update: (Δt, time) ->
@@ -85,7 +84,7 @@ export class Enemy
 
   shoot-at: (target) ->
     bearing = v2.norm target.physics.pos `v2.sub` @physics.pos
-    bullet = new EnemyBullet @physics.pos, this
+    bullet = new EnemyBullet this, @physics.pos
     bullet.physics.set-vel bearing `v2.scale` bullet-speed
     @bullets.push bullet
 
@@ -102,7 +101,7 @@ export class BigEnemy extends Enemy
   aspect = 71 / 100
   fire-rate = 0.05
   sprite-size = [ 50, 50 * aspect ]
-  bullet-speed = 200
+  bullet-speed = 400
   sprite-offset = sprite-size `v2.scale` 0.5
 
   (pos = [0 0]) ->
@@ -118,7 +117,6 @@ export class BigEnemy extends Enemy
       alive: yes
 
     @fire-timer  = new Timer fire-rate
-
     @wreckage-sprite = sprite \/assets/chunk-enemy.svg, 100
 
   move-to: (pos) ->
@@ -131,13 +129,18 @@ export class BigEnemy extends Enemy
     ctx.sprite medium, @physics.pos, sprite-size, offset: sprite-offset, rotation: @rotation
 
   shoot-at: (target) ->
-    bearing = v2.norm target.physics.pos `v2.sub` @physics.pos
+    jiggle    = [ (random-range -10, 10), (random-range -10, 10) ]
+    left-pos  = [ @physics.pos.0 + @w/3, @physics.pos.1 ]
+    right-pos = [ @physics.pos.0 - @w/3, @physics.pos.1 ]
 
-    bullet = new EnemyBullet [ @physics.pos.0 + @w/2, @physics.pos.1 ], this
-    bullet.physics.vel = bearing `v2.scale` bullet-speed
+    left-bearing  = v2.norm (jiggle `v2.add` target.physics.pos) `v2.sub` left-pos
+    right-bearing = v2.norm (jiggle `v2.add` target.physics.pos) `v2.sub` right-pos
+
+    bullet = new EnemyBullet this, left-pos
+    bullet.physics.vel = left-bearing `v2.scale` bullet-speed
     @bullets.push bullet
 
-    bullet = new EnemyBullet [ @physics.pos.0 - @w/2, @physics.pos.1 ], this
-    bullet.physics.vel = bearing `v2.scale` bullet-speed
+    bullet = new EnemyBullet this, right-pos
+    bullet.physics.vel = right-bearing `v2.scale` bullet-speed
     @bullets.push bullet
 

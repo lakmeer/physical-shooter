@@ -12,14 +12,14 @@
 export class Physics
 
   ({ p, v, a, f }) ->
-    @pos = p or [0 0]
-    @vel = v or [0 0]
-    @acc = a or [0 0]
+    @pos = if p then [p.0, p.1] else [0 0]
+    @vel = if v then [v.0, v.1] else [0 0]
+    @acc = if a then [a.0, a.1] else [0 0]
     @fri = f or 1
 
   update: (Δt) ->
     @vel = (@vel `v2.add` (@acc `v2.scale` Δt)) `v2.scale` @fri
-    @pos = @pos `v2.add` (@vel `v2.scale` Δt) `v2.add` (@acc `v2.scale` (0.5*Δt*Δt))
+    @pos =  @pos `v2.add` (@vel `v2.scale` Δt)  `v2.add` (@acc `v2.scale` (0.5*Δt*Δt))
 
   move-to: ->
     @set-pos ...
@@ -35,6 +35,14 @@ export class Physics
   set-acc: ([ x, y ]) ->
     @acc.0 = x
     @acc.1 = y
+
+  add-pos: ([ x, y ]) ->
+    @pos.0 += x
+    @pos.1 += y
+
+  add-vel: ([ x, y ]) ->
+    @vel.0 += x
+    @vel.1 += y
 
   get-bearing-to: ([ x, y ]) ->
     xx = x - @pos.0

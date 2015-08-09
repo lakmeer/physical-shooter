@@ -23,7 +23,7 @@ export blue =
 export green =
   stray-color: \forestgreen
   laser-color: -> rgb(0.9*it, 1, 0.9*it)
-  bullet-color: -> rgb(0, 0.9*(1-it), 0)
+  bullet-color: -> rgb(0, 0.5*(1-it), 0)
   paintjob: <[ darkgreen lightblue forestgreen ]>
 
 export magenta =

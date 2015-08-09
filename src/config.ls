@@ -9,8 +9,8 @@ export target-width = window.inner-width
 
 export screen-size  = [ target-width/scale-factor, target-width/scale-factor / screen-aspect ]
 
-export world-width  = 600
+export world-width  = 500
 
 export board-size   = [ world-width, world-width / screen-aspect ]
 
-export time-factor  = 1
+export time-factor  = 1/1

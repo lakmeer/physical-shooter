@@ -6,7 +6,7 @@
 { FrameDriver } = require \./frame-driver
 { Blitter }     = require \./blitter
 { BinSpace }    = require \./bin-space
-{ Timer }       = require \./timer
+{ Timer, OneShotTimer }       = require \./timer
 
 { Player }            = require \./player
 { Backdrop }          = require \./backdrop
@@ -24,21 +24,15 @@
 { board-size, time-factor } = require \config
 
 
-# Game play note:
-# Initialising a force weapon cost more than running it for longer -
-# rapidly switching force weapons will use twoce as much as sustained use
-
 # Init
 
 blast-force        = 50000
 blast-force-large  = 500000
+beam-attract-force = -100000
 repulse-force      = 5000
 start-wave-size    = 10
-bullets-per-second = 30
-last-shot-time     = -1
 effects-limit      = 50
 player-count       = 6
-beam-attract-force = -100000
 
 shaker           = new ScreenShake
 effects          = new EffectsDriver effects-limit
@@ -58,6 +52,7 @@ wave-size = do (n = start-wave-size, x = 1) ->*
   while true
     yield [ n += 1, floor x += 0.2 ]
 
+wave-complete-timer = new OneShotTimer 3
 
 
 # Homeless functions
@@ -176,7 +171,12 @@ play-test-frame = (Δt, time) ->
 
   # Spawn new enemies if we've run out
   if enemies.length < 1
-    new-wave wave-size
+    wave-complete-timer.begin!
+    wave-complete-timer.update Δt
+
+    #log wave-complete-timer.get-progress!
+    if wave-complete-timer.elapsed
+      new-wave wave-size
 
   # Update players and their bullets
   for player in players
@@ -209,10 +209,6 @@ play-test-frame = (Δt, time) ->
 
   # Check for collisions on the black plane
   for player in players
-    unless player.forcefield-active or player.beam-vortex-active
-      player.shoot!
-      void
-
     for other in player-bin-space.get-bin-collisions player
       if player.damage.health > 0 and other.collider.intersects player.collider
         other.impact? player, Δt
@@ -253,18 +249,14 @@ explosion-test-frame = (Δt, time) ->
   effects.update Δt, time
   effects-b.update Δt * time-factor, time * time-factor
 
-  new-shot-time = floor time/2
-
-  if new-shot-time > last-shot-time
+  # TODO: Put a real timer here
+  on-explosion = ->
     scale-index := wrap 0, scales.length-1, scale-index + 1
     scale = scales[scale-index]
     tint  = players[floor rnd player-count].explosion-tint-color
 
     effects.push   new Explosion [ -100, 0 ], scale, tint
     effects-b.push new Explosion [  100, 0 ], scale, tint
-
-    #shaker.trigger scale, 1 + scale/4
-    last-shot-time := new-shot-time
 
 
 # Test forcefield effect
@@ -317,7 +309,6 @@ crowding-test-frame = (Δt, time) ->
 laser-timer = new Timer 4
 
 laser-effect-frame = (Δt, time) ->
-
   shaker.update Δt
   laser-timer.update Δt
 
@@ -330,6 +321,17 @@ laser-effect-frame = (Δt, time) ->
     player.dont-auto-move!
     #player.move-to [ (-2.5 + i) * 50, -board-size.1 + 50 ]
 
+
+# Test Weapon Rankings
+
+weapons-test-frame = (Δt) ->
+  for player, i in players
+    player.dont-auto-move!
+    player.update Δt * time-factor
+    player.move-to [ -board-size.0/3 * 2.5 + board-size.0/3 * i, -board-size.1*0.85 ]
+
+
+# Standard renderer
 
 render-frame = (frame) ->
   main-canvas.clear!
@@ -384,8 +386,8 @@ document.add-event-listener \keyup, ({ which }:event) ->
 
 main-canvas.canvas.add-event-listener \mousemove, ({ pageX, pageY }) ->
   player = players[my-player-index]
-  mouse = [ pageX, pageY ]
-  dest = main-canvas.screen-space-to-game-space mouse
+  mouse  = [ pageX, pageY ]
+  dest   = main-canvas.screen-space-to-game-space mouse
   player.move-to dest
   player.dont-auto-move!
 
@@ -396,6 +398,7 @@ frame-driver = new FrameDriver
 frame-driver.on-frame render-frame
 frame-driver.on-tick ->
   try
+    #weapons-test-frame ...
     play-test-frame ...
   catch exception
     frame-driver.stop!

@@ -1,5 +1,5 @@
 
-{ id, log, min, rnd, wrap, floor, v2 } = require \std
+{ id, log, min, rnd, wrap, floor, random-range, v2 } = require \std
 
 { RadialCollider, LaserCollider } = require \./collider
 { board-size } = require \config
@@ -12,13 +12,11 @@
 # Blam
 #
 
-random-range = (a, b) -> a + (rnd b - a)
-
 class Bullet
 
-  (pos, @owner) ->
+  (@owner, pos, vel = [0 0]) ->
     @w ||= 1
-    @physics  = new Physics p:pos
+    @physics  = new Physics p:pos, v:vel
     @collider = new RadialCollider ...pos, @w/2
     @color = @owner.palette.bullet-color
     @state =
@@ -67,7 +65,7 @@ export class PlayerBullet extends Bullet
     super ...
     @state.quota = 1
     @state.power = 20
-    @physics.set-vel [0 100]
+    @physics.add-vel [0 100]
     @physics.set-acc [(random-range -5, 5), 1000]
 
   impact: (target, Δt) ->  # Assume target has compatible component
@@ -96,7 +94,7 @@ export class EnemyBullet extends Bullet
 
   { board-size } = require \config
 
-  (pos) ->
+  (@owner, pos) ->
     @w        = 5
     super ...
     @physics  = new Physics p:pos, f:1
@@ -156,17 +154,17 @@ export class Laser
 
   { board-size } = require \config
 
-  (@pos, @owner) ->
+  (@owner, pos) ->
     @w = 100
-    @collider = new LaserCollider @pos.0, @pos.1, @w
+    @pos = [ pos.0, pos.1 ]
+    @collider = new LaserCollider pos.0, pos.1, @w
+    @charge-time = 0.5
+    @phase = 1
     @state =
       alive: yes
       age: 0
       life: 2
       power: 200
-
-    @charge-time = 0.5
-    @phase = 1
 
   impact: (target, Δt) ->  # Assume target has compatible component
     damage-this-tick = @state.power * Δt

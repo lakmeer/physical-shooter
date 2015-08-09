@@ -43,6 +43,8 @@ export z = -> floor it * 255
 
 export rgb = (r,g,b) -> "rgb(#{z r},#{z g},#{z b})"
 
+export random-range = (a, b) -> a + (rnd b - a)
+
 
 # Physics processors
 
