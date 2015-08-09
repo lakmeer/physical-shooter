@@ -103,7 +103,7 @@ export class BoxCollider
 # Tests
 #
 
-test "CollisionBox - intersection", ->
+test "BoxCollider - intersection", ->
 
   a = new BoxCollider 0,  0, 10, 10
   b = new BoxCollider 0, 20, 10, 10
@@ -145,7 +145,7 @@ test "CollisionBox - intersection", ->
 
 
 
-test "CollisionBox - speed", ->
+test "BoxCollider - speed", ->
   box-count = 1000
   new-box = -> new BoxCollider (rnd 100), (rnd 100), 10, 10
   boxes = [ new-box! for i from 0 til box-count ]

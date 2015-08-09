@@ -7,6 +7,9 @@
 { Timer }          = require \./timer
 
 { sprite }  = require \./sprite
+
+Palette = require \./player-palettes
+
 small  = sprite \/assets/enemy-small.svg, 200
 medium = sprite \/assets/enemy-med.svg,   200
 
@@ -34,6 +37,7 @@ export class Enemy
     @type = \small
     @bullets = []
     @box = @collider
+    @palette = Palette.enemy
 
     # Damage component
     @damage =
@@ -81,8 +85,8 @@ export class Enemy
 
   shoot-at: (target) ->
     bearing = v2.norm target.physics.pos `v2.sub` @physics.pos
-    bullet = new EnemyBullet @physics.pos, bearing `v2.scale` bullet-speed
-      #bullet.physics.vel =
+    bullet = new EnemyBullet @physics.pos, this
+    bullet.physics.set-vel bearing `v2.scale` bullet-speed
     @bullets.push bullet
 
 
@@ -129,11 +133,11 @@ export class BigEnemy extends Enemy
   shoot-at: (target) ->
     bearing = v2.norm target.physics.pos `v2.sub` @physics.pos
 
-    bullet = new EnemyBullet [ @physics.pos.0 + @w/2, @physics.pos.1 ]
+    bullet = new EnemyBullet [ @physics.pos.0 + @w/2, @physics.pos.1 ], this
     bullet.physics.vel = bearing `v2.scale` bullet-speed
     @bullets.push bullet
 
-    bullet = new EnemyBullet [ @physics.pos.0 - @w/2, @physics.pos.1 ]
+    bullet = new EnemyBullet [ @physics.pos.0 - @w/2, @physics.pos.1 ], this
     bullet.physics.vel = bearing `v2.scale` bullet-speed
     @bullets.push bullet
 

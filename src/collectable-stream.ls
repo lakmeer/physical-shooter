@@ -7,7 +7,7 @@ export class CollectableStream
       #bullet.vel = bullet.vel `v2.scale` 0.2
       item.stray = true
       item.owner = @owner
-      item.color = @owner.stray-color 0
+      item.color = @owner.palette.stray-color
       item.friction = 0.99
 
   update: (Δt, time) ->

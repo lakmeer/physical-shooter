@@ -1,8 +1,7 @@
 
-{ id, log, box, rnd, v2, floor, physics, dampen } = require \std
+{ id, log, box, rnd, v2, floor, physics } = require \std
 
 rvel = (n = 100) -> [ n/2 - (rnd n), n/2 - (rnd n) ]
-
 
 export class Explosion
 

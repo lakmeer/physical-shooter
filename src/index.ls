@@ -6,7 +6,7 @@
 { FrameDriver } = require \./frame-driver
 { Blitter }     = require \./blitter
 { BinSpace }    = require \./bin-space
-{ Timer } = require \./timer
+{ Timer }       = require \./timer
 
 { Player }            = require \./player
 { Backdrop }          = require \./backdrop
@@ -92,10 +92,10 @@ emit-beam-blast = (force, self, others, Δt) ->
   draw = (target, push) ->
     xx  = x - target.physics.pos.0
     if Math.abs(xx) < min-dist
-      target.vel.0 += xx
-      if push then target.vel.1 *= 0.5
+      target.physics.vel.0 += xx
+      if push then target.physics.vel.1 *= 0.5
     else
-      target.vel.0 += -xx * force * Δt * ids xx
+      target.physics.vel.0 += -xx * force * Δt * ids xx
 
 
   for other in others when other isnt self
@@ -344,7 +344,11 @@ render-frame = (frame) ->
 
   pickups.map (.draw main-canvas)
   enemies.map (.draw main-canvas)
-  players.map (.draw main-canvas)
+
+  # This order is important
+  players.map (.draw-projectiles main-canvas)
+  players.map (.draw-lasers main-canvas)
+  players.map (.draw-ship main-canvas)
 
 
 # Listen
@@ -363,8 +367,8 @@ document.add-event-listener \keydown, ({ which }:event) ->
   | ESCAPE => frame-driver.toggle!
   | ENTER  => players.map (.unkill!)
   | SPACE  => players[my-player-index].forcefield-active = yes
-  #| KEY_Z  => players[my-player-index].laser shaker
-  | KEY_Z  => players.map (.laser shaker)
+  | KEY_Z  => players[my-player-index].laser shaker
+  #| KEY_Z  => players.map (.laser shaker)
   | KEY_C  => players[my-player-index].beam-vortex-active = yes
   | _  => return event
   event.prevent-default!

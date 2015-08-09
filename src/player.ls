@@ -6,27 +6,9 @@
 { Timer } = require \./timer
 { PlayerBullet, Laser } = require \./bullet
 
-{ sprite, palette-sprite } = require \./sprite
+Palette = require \./player-palettes
 
-
-# Generate graphic
-
-lumin = sprite \/assets/ship-luminosity.svg, 200
-
-color-schemes = [
-  <[ darkred lightblue darkred ]>
-  <[ darkblue lightblue royalblue ]>
-  <[ darkgreen lightblue forestgreen ]>
-  <[ purple lightblue magenta ]>
-  <[ cyan lightblue skyblue ]>
-  <[ yellow lightblue gold ]>
-]
-
-color-map = \/assets/ship-colormap.svg
-lumin-map = \/assets/ship-luminosity.svg
-
-ship-sprites = color-schemes.map (palette) ->
-  palette-sprite color-map, lumin-map, palette, 200
+{ palette-sprite } = require \./sprite
 
 
 #
@@ -45,33 +27,10 @@ export class Player
   sprite-size   = [ 30, 30 ]
   sprite-offset = sprite-size `v2.scale` 0.5
 
-  ch   = -> floor it * 255
-  ich  = -> 255 - floor it * 255
-  rgb  = (r, g, b) -> "rgb(#{ch r},#{ch g},#{ch b})"
-  irgb = (r, g, b) -> "rgb(#{ich r},#{ich g},#{ich b})"
+  palette-index-assignment = <[ red blue green magenta cyan yellow ]>
 
-  ship-colors = [
-    -> \red #rgb it, 0, 0
-    -> \green #rgb 0, 0, it
-    -> \blue #rgb 0, it*0.9, 0
-    -> \magenta #rgb 0, it, it
-    -> \cyan #rgb it, it, 0
-    -> \yellow #rgb it, 0 , it
-  ]
-
-  z = -> floor it * 255
-
-  rgb = (r,g,b) -> "rgb(#{z r},#{z g},#{z b})"
-
-  ship-colors = [
-    -> rgb(1-it, 0, 0)
-    -> rgb(0, 0, 1-it)
-    -> rgb(0, 0.9*(1-it), 0)
-    -> rgb(1-it, 0, 1-it)
-    -> rgb(0, 1-it, 1-it)
-    -> rgb(1-it, 1-it, 0)
-  ]
-
+  color-map = \/assets/ship-colormap.svg
+  lumin-map = \/assets/ship-luminosity.svg
 
   (@index) ->
     @bullets   = []
@@ -81,8 +40,6 @@ export class Player
     @auto-move = yes
     @score     = 0
 
-    log "New Player: color=", @derive-bullet-color 1
-
     @damage =
       health: 200
       max-hp: 200
@@ -90,11 +47,11 @@ export class Player
     @forcefield-phase = 0
     @forcefield-active = no
 
-    @stray-color = ship-colors[@index]
-    @explosion-tint-color = ship-colors[@index] 0
-
+    @laser-timer  = new Timer laser-rate
     @bullet-timer = new Timer bullet-rate
-    @laser-timer = new Timer laser-rate
+
+    @palette = Palette[palette-index-assignment[@index]]
+    @sprite = palette-sprite color-map, lumin-map, @palette.paintjob, 200
 
   kill: ->
     @dead = true
@@ -104,12 +61,8 @@ export class Player
     @dead = false
     @damage.health = @damage.max-hp
 
-  derive-color: ->
-    p = limit 0, 1, @damage.health / @damage.max-hp
-    ship-colors[@index] p
-
   derive-bullet-color: (p) ->
-    ship-colors[@index] p
+    @palette.bullet-color p
 
   auto-pilot: (time) ->
     m = Math.sin time + @index * pi / 3
@@ -140,12 +93,22 @@ export class Player
     @physics.move-to pos
     @collider.move-to pos
 
-  draw: (ctx) ->
+  draw-projectiles: (ctx) ->
+    @bullets.map (.draw ctx)
+
+  draw-lasers: (ctx) ->
+    @lasers.map (.draw ctx)
+
+  draw-ship: (ctx) ->
     if @dead then return
     @draw-forcefield ctx if @forcefield-active
-    @bullets.map (.draw ctx)
-    @lasers.map (.draw ctx)
-    ctx.sprite ship-sprites[@index], @physics.pos, sprite-size, offset: sprite-offset
+    ctx.sprite @sprite, @physics.pos, sprite-size, offset: sprite-offset
+
+  draw: (ctx) ->
+    if @dead then return
+    @draw-projectiles ctx
+    @draw-lasers ctx
+    @draw-ship ctx
 
   draw-forcefield: (ctx) ->
     shells = 4

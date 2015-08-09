@@ -2,18 +2,7 @@
 { id, log, min, rnd, wrap, floor, v2 } = require \std
 
 { RadialCollider, LaserCollider } = require \./collider
-
 { board-size } = require \config
-
-ship-colors = [
-  -> "rgb(#{ 255 - floor it * 255 }, 0, 0)"
-  -> "rgb(0, 0, #{ 255 - floor it * 255 })"
-  -> "rgb(0, #{ 230 - floor it * 230 }, 0)"
-  -> "rgb(#{ 255 - floor it * 255 }, 0, #{ 255 - floor it * 255 })"
-  -> "rgb(#{ 255 - floor it * 255 }, #{ 128 - floor it * 128 }, 0)"
-  -> p = 240 - floor it * 240; "rgb(#p,#p,#p)"
-]
-
 { Physics } = require \./physics
 
 
@@ -31,6 +20,7 @@ class Bullet
     @w ||= 1
     @physics  = new Physics p:pos
     @collider = new RadialCollider ...pos, @w/2
+    @color = @owner.palette.bullet-color
     @state =
       alive: yes
       spent: 0
@@ -38,7 +28,7 @@ class Bullet
       power: 1
 
   derive-color: ->
-    \white
+    @color @state.spent / @state.quota
 
   update: (Δt) ->
     @physics.update Δt
@@ -52,7 +42,8 @@ class Bullet
       @physics.pos.1 <=  board-size.1 * 1.5 and
       @physics.pos.1 >= -board-size.1 - 1.5
 
-  knock-back: (target) ->
+  knock-back: (target, n) ->
+    target.physics.vel.1 += n
 
   draw: ->
     it.set-color \magenta
@@ -67,6 +58,10 @@ class Bullet
 
 export class PlayerBullet extends Bullet
 
+  knock-back-amount =
+    small: 10
+    large: 1
+
   ->
     @w = 2
     super ...
@@ -75,26 +70,19 @@ export class PlayerBullet extends Bullet
     @physics.set-vel [0 100]
     @physics.set-acc [(random-range -5, 5), 1000]
 
-  derive-color: ->
-    @owner.derive-bullet-color @state.spent / @state.quota
-
   impact: (target, Δt) ->  # Assume target has compatible component
     damage-this-tick = @state.power * Δt
     target.damage.health -= damage-this-tick
-
-    if target.type? and target.type is \small
-      target.physics.vel.1 += 10  # knockback
-    else
-      target.physics.vel.1 += 1  # knockback
-
+    @knock-back target, knock-back-amount[target.type]
     @state.spent += damage-this-tick
     @state.hit = true
 
   draw: ->
-    it.circle @physics.pos, @w
+    length = @w * (3 + @physics.vel.1/100)
     it.set-color @derive-color!
-    it.rect [@physics.pos.0 - @w/2, @physics.pos.1 + @w/2],
-      [ @w, @w * (3 + @physics.vel.1/100) ]
+    it.rect [ @physics.pos.0 - @w/2, @physics.pos.1 + @w/2 ], [ @w, length ]
+    it.set-color \white
+    it.circle @physics.pos, @w
 
 
 #
@@ -108,12 +96,12 @@ export class EnemyBullet extends Bullet
 
   { board-size } = require \config
 
-  (pos, vel) ->
+  (pos) ->
     @w        = 5
     super ...
-    @physics  = new Physics p:pos, v:vel, f:1
+    @physics  = new Physics p:pos, f:1
     @stray    = no
-    @color    = \white
+    @color    = -> \white
 
     @collection-speed = 0
 
@@ -186,9 +174,6 @@ export class Laser
     @state.spent += damage-this-tick
     @state.hit = true
 
-  derive-color: (p, i) ->
-    ship-colors[@owner.index] p, i
-
   update: (Δt, pos = @pos) ->
     @pos.0 = pos.0
     @pos.1 = pos.1
@@ -220,7 +205,7 @@ export class Laser
     p = @state.age / @charge-time
     it.ctx.global-alpha = p*p
     it.ctx.global-composite-operation = \lighter
-    it.set-color @derive-color 1 - p
+    it.set-color @owner.palette.laser-color p
     it.circle @pos, @w * 20 * (1 - p*p*p)
     it.ctx.global-alpha = 1
     it.ctx.global-composite-operation = \source-over
@@ -233,7 +218,7 @@ export class Laser
   draw-phase-b: ->
     p = @state.age / @state.life
     it.ctx.global-composite-operation = \lighter
-    @draw-beam it, @w * (1 - p*p*p), @derive-color p
+    @draw-beam it, @w * (1 - p*p*p), @owner.palette.laser-color 1 - p
     @draw-beam it, @w * (1 -  p*p ), \grey
     @draw-beam it, @w * (1 -   p  ), \white
     it.ctx.global-composite-operation = \source-over

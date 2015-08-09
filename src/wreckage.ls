@@ -1,5 +1,5 @@
 
-{ id, log, max, box, rnd, v2, physics, dampen } = require \std
+{ id, log, max, box, rnd, v2, dampen } = require \std
 
 rvel = (n = 100) -> [ n/2 - (rnd n), n/2 - (rnd n) ]
 

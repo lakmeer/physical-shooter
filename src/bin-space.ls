@@ -6,7 +6,6 @@ export class BinSpace
   { board-size } = require \config
 
   (@cols, @rows, @color = \blue) ~>
-    log "New BinSpace", @cols, @rows
     @bins = @init-bins!
     @bin-size = [ board-size.0 * 2/@cols, board-size.1 * 2/@rows ]
 
