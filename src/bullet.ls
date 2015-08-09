@@ -1,7 +1,20 @@
 
-{ id, log, min, wrap, floor, v2 } = require \std
+{ id, log, min, rnd, wrap, floor, v2 } = require \std
 
-{ CollisionRadius, LaserCollider } = require \./collision-box
+{ RadialCollider, LaserCollider } = require \./collider
+
+{ board-size } = require \config
+
+ship-colors = [
+  -> "rgb(#{ 255 - floor it * 255 }, 0, 0)"
+  -> "rgb(0, 0, #{ 255 - floor it * 255 })"
+  -> "rgb(0, #{ 230 - floor it * 230 }, 0)"
+  -> "rgb(#{ 255 - floor it * 255 }, 0, #{ 255 - floor it * 255 })"
+  -> "rgb(#{ 255 - floor it * 255 }, #{ 128 - floor it * 128 }, 0)"
+  -> p = 240 - floor it * 240; "rgb(#p,#p,#p)"
+]
+
+{ Physics } = require \./physics
 
 
 #
@@ -10,86 +23,102 @@
 # Blam
 #
 
-export class Bullet
+random-range = (a, b) -> a + (rnd b - a)
 
-  { board-size } = require \config
+class Bullet
 
-  ship-colors = [
-    -> "rgb(#{ 255 - floor it * 255 }, 0, 0)"
-    -> "rgb(0, 0, #{ 255 - floor it * 255 })"
-    -> "rgb(0, #{ 230 - floor it * 230 }, 0)"
-    -> "rgb(#{ 255 - floor it * 255 }, 0, #{ 255 - floor it * 255 })"
-    -> "rgb(#{ 255 - floor it * 255 }, #{ 128 - floor it * 128 }, 0)"
-    -> p = 240 - floor it * 240; "rgb(#p,#p,#p)"
-  ]
-
-  (@pos, @owner) ->
-    @vel = [0 0]
-    @acc = [(100 * Math.random! - 50), 1000]
-    @w     = 2
-    @box   = new CollisionRadius ...@pos, @w/2
+  (pos, @owner) ->
+    @w ||= 1
+    @physics  = new Physics p:pos
+    @collider = new RadialCollider ...pos, @w/2
     @state =
       alive: yes
-      hit: no
       spent: 0
       quota: 1
-      power: 20
+      power: 1
+
+  derive-color: ->
+    \white
+
+  update: (Δt) ->
+    @physics.update Δt
+    @collider.move-to @physics.pos
+    @state.alive = @is-in-bounds! and @state.spent <= @state.quota
+
+  is-in-bounds: ->
+    @state.alive =
+      @physics.pos.0 <=  board-size.0 * 1.5 and
+      @physics.pos.0 >= -board-size.0 - 1.5 and
+      @physics.pos.1 <=  board-size.1 * 1.5 and
+      @physics.pos.1 >= -board-size.1 - 1.5
+
+  knock-back: (target) ->
+
+  draw: ->
+    it.set-color \magenta
+    it.rect [ @physics.pos.0 - @w/2, @physics.pos.1 + @w/2], [ @w, @w ]
+
+
+#
+# Player's Bullet
+#
+# Custom launch parameters and drawing
+#
+
+export class PlayerBullet extends Bullet
+
+  ->
+    @w = 2
+    super ...
+    @state.quota = 1
+    @state.power = 20
+    @physics.set-vel [0 100]
+    @physics.set-acc [(random-range -5, 5), 1000]
+
+  derive-color: ->
+    @owner.derive-bullet-color @state.spent / @state.quota
 
   impact: (target, Δt) ->  # Assume target has compatible component
     damage-this-tick = @state.power * Δt
     target.damage.health -= damage-this-tick
-    if target.type? is \small
-      target.vel.1 += 10  # knockback
+
+    if target.type? and target.type is \small
+      target.physics.vel.1 += 10  # knockback
     else
-      target.vel.1 += 1  # knockback
+      target.physics.vel.1 += 1  # knockback
 
     @state.spent += damage-this-tick
     @state.hit = true
 
-  derive-color: ->
-    p = @state.spent/@state.quota
-    ship-colors[@owner.index] p
-
-  update: (Δt) ->
-    @vel = (@acc `v2.scale` Δt) `v2.add` @vel
-    @pos = (@vel `v2.scale` Δt) `v2.add` @pos `v2.add` (@acc `v2.scale` (0.5 * Δt * Δt))
-    @box.move-to @pos
-    @state.alive = @pos.1 <= board-size.1 * 1.5
-    return @state.alive and @state.spent <= @state.quota
-
   draw: ->
+    it.circle @physics.pos, @w
     it.set-color @derive-color!
-    it.rect [@pos.0 - @w/2, @pos.1 + @w/2], [ @w, @w * (3 + @vel.1/100) ]
+    it.rect [@physics.pos.0 - @w/2, @physics.pos.1 + @w/2],
+      [ @w, @w * (3 + @physics.vel.1/100) ]
 
 
 #
 # Enemy Variant
 #
 
-export class EnemyBullet
+export class EnemyBullet extends Bullet
 
   range = 10
   collection-ramp-up = 25
 
   { board-size } = require \config
 
-  (@pos) ->
-    @vel = [0 0]
-    @acc = [0 0] # [(100 * Math.random! - 50), -1000]
+  (pos, vel) ->
+    @w        = 5
+    super ...
+    @physics  = new Physics p:pos, v:vel, f:1
+    @stray    = no
+    @color    = \white
 
-    @w     = 5
-    @box   = new CollisionRadius ...@pos, @w/2
-    @stray = no
-    @color = \white
-    @friction = 1
     @collection-speed = 0
 
-    @state =
-      alive: yes
-      hit: no
-      spent: 0
-      quota: 1
-      power: 25
+    @state.quota = 1
+    @state.power = 25
 
   impact: (target, Δt) ->  # Assume target has compatible component
     damage-this-tick = @state.power * Δt
@@ -103,15 +132,8 @@ export class EnemyBullet
     else
       "rgb(#{ 255 - floor 255 * @state.spent/@state.quota },255,255)"
 
-  update: (Δt) ->
-    @vel = (@acc `v2.scale` Δt) `v2.add` @vel `v2.scale` @friction
-    @pos = (@vel `v2.scale` Δt) `v2.add` @pos `v2.add` (@acc `v2.scale` (0.5 * Δt * Δt))
-    @box.move-to @pos
-    @state.alive = @pos.1 <= board-size.1 * 1.5 and @pos.1 >= -board-size.1 * 1.5
-    return @state.alive and @state.spent <= @state.quota
-
   update-stray: (Δt, owner) ->
-    diff = owner.pos `v2.sub` @pos
+    diff = owner.physics.pos `v2.sub` @physics.pos
     dist = v2.hyp diff
 
     if dist < range
@@ -121,21 +143,21 @@ export class EnemyBullet
     @collection-speed = min dist, @collection-speed + collection-ramp-up * Δt
     dir  = v2.norm diff
     jump = dir `v2.scale` @collection-speed
-    @pos = @pos `v2.add` jump
+    @physics.pos = @physics.pos `v2.add` jump
     return true
 
   draw: ->
     if @stray
       it.ctx.global-alpha = 0.7
       it.set-color @derive-color!
-      it.circle @pos, @w * 2
+      it.circle @physics.pos, @w * 2
       it.ctx.global-alpha = 0.5
       it.set-color \white
-      it.circle @pos, @w * 2 * 0.7
+      it.circle @physics.pos, @w * 2 * 0.7
       it.ctx.global-alpha = 1
     else
       it.set-color @derive-color!
-      it.circle @pos, @w
+      it.circle @physics.pos, @w
 
 
 #
@@ -146,15 +168,9 @@ export class Laser
 
   { board-size } = require \config
 
-  ship-colors = [
-    (p, i) -> "rgb(255, #{ 255 - floor p * 255 }, #{ 255 - floor p * 255 })"
-    (p, i) -> "rgb(#{ 50 + 250 - floor p * 250 }, #{ 50 + 250 - floor p * 250 }, 255)"
-    (p, i) -> "rgb(#{ 255 - floor p * 255 }, 255, #{ 255 - floor p * 255 })"
-  ]
-
   (@pos, @owner) ->
-    @w     = 100
-    @box   = new LaserCollider @pos.0, @pos.1, @w
+    @w = 100
+    @collider = new LaserCollider @pos.0, @pos.1, @w
     @state =
       alive: yes
       age: 0
@@ -167,7 +183,6 @@ export class Laser
   impact: (target, Δt) ->  # Assume target has compatible component
     damage-this-tick = @state.power * Δt
     target.damage.health -= damage-this-tick
-    target.vel.1 += 10  # knockback
     @state.spent += damage-this-tick
     @state.hit = true
 
@@ -177,17 +192,17 @@ export class Laser
   update: (Δt, pos = @pos) ->
     @pos.0 = pos.0
     @pos.1 = pos.1
-    @box.move-to @pos
+    @collider.move-to @pos
     @state.age += Δt
 
     if @phase is 1 and @state.age >= @charge-time
       @phase = 2
-      @box.disabled = no
+      @collider.disabled = no
       @state.age %= @charge-time
 
     if @phase is 2
       p = @state.age / @state.life
-      @box.set-width @w * (1 - p*p*p)
+      @collider.set-width @w * (1 - p*p*p)
 
       if @state.age >= @state.life
         @state.age %= @state.life

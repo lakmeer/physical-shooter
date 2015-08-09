@@ -13,6 +13,8 @@ export min = Math.min
 
 export max = Math.max
 
+export asin = Math.asin
+
 export v2 =
   hyp   : (v) -> sqrt (v.0 * v.0 + v.1 * v.1)
   norm  : (v) -> d = v2.hyp v; if d is 0 then [0 0] else [ v.0/d, v.1/d ]

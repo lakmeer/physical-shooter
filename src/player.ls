@@ -1,9 +1,10 @@
 
-{ id, log, box, limit, floor, sfx, v2, pi } = require \std
+{ id, log, limit, floor, v2, pi } = require \std
 
-{ CollisionRadius } = require \./collision-box
-{ Bullet, Laser } = require \./bullet
-
+{ RadialCollider } = require \./collider
+{ Physics } = require \./physics
+{ Timer } = require \./timer
+{ PlayerBullet, Laser } = require \./bullet
 
 { sprite, palette-sprite } = require \./sprite
 
@@ -17,8 +18,8 @@ color-schemes = [
   <[ darkblue lightblue royalblue ]>
   <[ darkgreen lightblue forestgreen ]>
   <[ purple lightblue magenta ]>
-  <[ orangered lightblue orange ]>
-  <[ white lightblue white ]>
+  <[ cyan lightblue skyblue ]>
+  <[ yellow lightblue gold ]>
 ]
 
 color-map = \/assets/ship-colormap.svg
@@ -38,28 +39,49 @@ export class Player
 
   { board-size } = require \config
 
+  laser-rate    = 2
+  bullet-rate   = 0.05
+
   sprite-size   = [ 30, 30 ]
   sprite-offset = sprite-size `v2.scale` 0.5
 
-  bullet-rate = 0.05
-  laser-rate = 2
+  ch   = -> floor it * 255
+  ich  = -> 255 - floor it * 255
+  rgb  = (r, g, b) -> "rgb(#{ch r},#{ch g},#{ch b})"
+  irgb = (r, g, b) -> "rgb(#{ich r},#{ich g},#{ich b})"
 
   ship-colors = [
-    -> "rgb(#{ 255 - floor it * 255 }, 0, 0)"
-    -> "rgb(0, 0, #{ 255 - floor it * 255 })"
-    -> "rgb(0, #{ 230 - floor it * 230 }, 0)"
-    -> "rgb(#{ 255 - floor it * 255 }, 0, #{ 255 - floor it * 255 })"
-    -> "rgb(#{ 255 - floor it * 255 }, #{ 128 - floor it * 128 }, 0)"
-    -> p = 230 - floor it * 230; "rgb(#p,#p,#p)"
+    -> \red #rgb it, 0, 0
+    -> \green #rgb 0, 0, it
+    -> \blue #rgb 0, it*0.9, 0
+    -> \magenta #rgb 0, it, it
+    -> \cyan #rgb it, it, 0
+    -> \yellow #rgb it, 0 , it
   ]
 
+  z = -> floor it * 255
+
+  rgb = (r,g,b) -> "rgb(#{z r},#{z g},#{z b})"
+
+  ship-colors = [
+    -> rgb(1-it, 0, 0)
+    -> rgb(0, 0, 1-it)
+    -> rgb(0, 0.9*(1-it), 0)
+    -> rgb(1-it, 0, 1-it)
+    -> rgb(0, 1-it, 1-it)
+    -> rgb(1-it, 1-it, 0)
+  ]
+
+
   (@index) ->
-    @bullets = []
-    @lasers = []
-    @pos = [0 20 - board-size.1]
-    @box = new CollisionRadius ...@pos, 10
+    @bullets   = []
+    @lasers    = []
+    @physics   = new Physics [0 20 - board-size.1]
+    @collider  = new RadialCollider 0, 0, 10
     @auto-move = yes
-    @score = 0
+    @score     = 0
+
+    log "New Player: color=", @derive-bullet-color 1
 
     @damage =
       health: 200
@@ -71,15 +93,8 @@ export class Player
     @stray-color = ship-colors[@index]
     @explosion-tint-color = ship-colors[@index] 0
 
-    @bullet-timer =
-      active: no
-      target-time: bullet-rate
-      current-time: 0
-
-    @laser-timer =
-      active: no
-      target-time: laser-rate
-      current-time: 0
+    @bullet-timer = new Timer bullet-rate
+    @laser-timer = new Timer laser-rate
 
   kill: ->
     @dead = true
@@ -93,44 +108,44 @@ export class Player
     p = limit 0, 1, @damage.health / @damage.max-hp
     ship-colors[@index] p
 
+  derive-bullet-color: (p) ->
+    ship-colors[@index] p
+
+  auto-pilot: (time) ->
+    m = Math.sin time + @index * pi / 3
+    g = Math.cos time + @index * pi / 6
+    @physics.pos.0 = board-size.0 * 0.98 * m # * Math.abs(m)
+    @physics.pos.1 = -board-size.1 + board-size.1/3 + g * board-size.1/5
+
   update: (Δt, time) ->
     if @dead then return
-    if @auto-move
-      m = Math.sin time + @index * pi / 3
-      g = Math.cos time + @index * pi / 6
-      @pos.0 = board-size.0 * 0.98 * m # * Math.abs(m)
-      @pos.1 = -board-size.1 + 100 + g * 70
+    if @auto-move then @auto-pilot time
+
+    pos = @physics.pos
 
     @forcefield-phase += Δt * 40
     @bullets = @bullets.filter (.update Δt)
-    pos = @pos
     @lasers  = @lasers.filter (.update Δt, pos)
 
-    if @laser-timer.active
-      @laser-timer.current-time += Δt
+    @laser-timer.update Δt
+    @bullet-timer.update Δt
 
-    if @laser-timer.current-time > @laser-timer.target-time
-      @laser-timer.current-time = 0
-      @laser-timer.active = no
+    if @bullet-timer.expired
+      @shoot!
+      @bullet-timer.reset!
 
-    if @bullet-timer.active
-      @bullet-timer.current-time += Δt
+    @collider.move-to @physics.pos
 
-    if @bullet-timer.current-time > @bullet-timer.target-time
-      @bullet-timer.current-time = 0
-      @bullet-timer.active = no
-
-    @box.move-to @pos
-
-  move-to: (@pos) ->
-    @box.move-to @pos
+  move-to: (pos) ->
+    @physics.move-to pos
+    @collider.move-to pos
 
   draw: (ctx) ->
     if @dead then return
     @draw-forcefield ctx if @forcefield-active
     @bullets.map (.draw ctx)
     @lasers.map (.draw ctx)
-    ctx.sprite ship-sprites[@index], @pos, sprite-size, offset: sprite-offset
+    ctx.sprite ship-sprites[@index], @physics.pos, sprite-size, offset: sprite-offset
 
   draw-forcefield: (ctx) ->
     shells = 4
@@ -140,21 +155,21 @@ export class Player
     for shell from 0 til shells
       diam = 10 + shell * shell-gap + @forcefield-phase % shell-gap
       ctx.ctx.global-alpha = 1 - diam/max-diam
-      ctx.stroke-circle @pos, diam
+      ctx.stroke-circle @physics.pos, diam
     ctx.ctx.global-alpha = 1
 
   shoot: ->
     if @dead then return
     if @laser-timer.active then return
     if not @bullet-timer.active
-      @bullets.push new Bullet [ @pos.0 - 3, @pos.1 + 5 ], this
-      @bullets.push new Bullet [ @pos.0 + 3, @pos.1 + 5 ], this
+      @bullets.push new PlayerBullet [ @physics.pos.0 - 3, @physics.pos.1 + 5 ], this
+      @bullets.push new PlayerBullet [ @physics.pos.0 + 3, @physics.pos.1 + 5 ], this
       @bullet-timer.active = yes
 
   laser: (shaker) ->
     if @dead then return
     if @laser-timer.active is no
-      @lasers.push new Laser [ @pos.0, @pos.1 ], this
+      @lasers.push new Laser [ @physics.pos.0, @physics.pos.1 ], this
       @laser-timer.active = yes
       if shaker?
         shaker.trigger-after 0.5, 10, 2.5

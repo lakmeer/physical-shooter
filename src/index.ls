@@ -6,32 +6,17 @@
 { FrameDriver } = require \./frame-driver
 { Blitter }     = require \./blitter
 { BinSpace }    = require \./bin-space
+{ Timer } = require \./timer
 
 { Player }            = require \./player
 { Backdrop }          = require \./backdrop
 { Enemy, BigEnemy }   = require \./enemy
 { CollectableStream } = require \./collectable-stream
 
-{ CollisionBox } = require \./collision-box
-{ ScreenShake }  = require \./screen-shake
-{ Explosion }    = require \./explosion
-{ Wreckage }     = require \./wreckage
-
-
-class EffectsDriver
-  (@limit) ->
-    @effects = []
-
-  push: (effect) ->
-    if @effects.length >= @limit
-      @effects.shift!
-    @effects.push effect
-
-  update: (Δt, time) ->
-    @effects = @effects.filter (.update Δt, time)
-
-  draw: (ctx) ->
-    @effects.map (.draw ctx)
+{ EffectsDriver } = require \./effects-driver
+{ ScreenShake }   = require \./screen-shake
+{ Explosion }     = require \./explosion
+{ Wreckage }      = require \./wreckage
 
 
 # Config
@@ -52,7 +37,7 @@ start-wave-size    = 10
 bullets-per-second = 30
 last-shot-time     = -1
 effects-limit      = 50
-player-count       = 3
+player-count       = 6
 beam-attract-force = -100000
 
 shaker           = new ScreenShake
@@ -63,7 +48,7 @@ enemy-bin-space  = new BinSpace 40, 20, \white
 player-bin-space = new BinSpace 40, 20, \black
 crowd-bin-space  = new BinSpace 40, 20, \red
 
-players = [ new Player i for i from 0 til player-count ]
+players = [ new Player i + 0 for i from 0 til player-count ]
 enemies = []
 pickups = []
 
@@ -81,14 +66,14 @@ ids = -> if it is 0 then 0 else 1 / (it*it)
 
 emit-force-blast = (force, self, others, Δt) ->
 
-  [ x, y ] = self.pos
+  [ x, y ] = self.physics.pos
 
   blast = (target) ->
-    xx  = x - target.pos.0
-    yy  = y - target.pos.1
-    d   = v2.dist target.pos, self.pos
+    xx  = x - target.physics.pos.0
+    yy  = y - target.physics.pos.1
+    d   = v2.dist target.physics.pos, self.physics.pos
     push = [ force * -xx * ids(d) * Δt, force * -yy * ids(d) * Δt]
-    target.vel = target.vel `v2.add` push
+    target.physics.vel = target.physics.vel `v2.add` push
 
   for other in others when other isnt self
     blast other
@@ -99,13 +84,13 @@ emit-force-blast = (force, self, others, Δt) ->
 
 emit-beam-blast = (force, self, others, Δt) ->
 
-  [ x ] = self.pos
+  [ x ] = self.physics.pos
 
   effective-distance = 250
   min-dist = 10
 
   draw = (target, push) ->
-    xx  = x - target.pos.0
+    xx  = x - target.physics.pos.0
     if Math.abs(xx) < min-dist
       target.vel.0 += xx
       if push then target.vel.1 *= 0.5
@@ -147,8 +132,8 @@ check-destroyed = (enemy, owner, Δt) ->
     enemy.damage.alive = no
     shaker.trigger 5, 0.2
     pickups.push new CollectableStream enemy.bullets, owner
-    effects.push new Explosion enemy.pos, if enemy.type is \large then 2 else 1
-    effects.push new Wreckage enemy.pos, enemy.wreckage-sprite
+    effects.push new Explosion enemy.physics.pos, if enemy.type is \large then 2 else 1
+    effects.push new Wreckage enemy.physics.pos, enemy.wreckage-sprite
     force = if enemy.type is \large then blast-force-large else blast-force
     emit-force-blast force, enemy, enemies, Δt
 
@@ -156,7 +141,7 @@ de-crowd = (self, others) ->
   max-speed = 5
   effective-distance = if self.type is \large then 100 else 25
   for other in others
-    diff = v2.sub other.pos, self.pos
+    diff = v2.sub other.physics.pos, self.physics.pos
     dist = v2.hyp diff
     dir  = v2.norm diff
     if dist < effective-distance
@@ -164,8 +149,8 @@ de-crowd = (self, others) ->
       y = dir.1 * max-speed * (dist/effective-distance)
       #self.vel.0 -= x - 0.5 + rnd 1
       #self.vel.1 -= y - 0.5 + rnd 1
-      other.vel.0 += x * 1.5 - 0.5 + rnd 1
-      other.vel.1 += y * 1.0 - 0.5 + rnd 1
+      other.physics.vel.0 += x * 1.5 - 0.5 + rnd 1
+      other.physics.vel.1 += y * 1.0 - 0.5 + rnd 1
 
 
 # Tick functions
@@ -217,7 +202,7 @@ play-test-frame = (Δt, time) ->
   # Check for collision on the white plane
   for enemy in enemies
     for other in enemy-bin-space.get-bin-collisions enemy
-      if other.box.intersects enemy.box
+      if other.collider.intersects enemy.collider
         if other.impact?
           other.impact enemy, Δt
           check-destroyed enemy, other.owner, Δt
@@ -229,7 +214,7 @@ play-test-frame = (Δt, time) ->
       void
 
     for other in player-bin-space.get-bin-collisions player
-      if player.damage.health > 0 and other.box.intersects player.box
+      if player.damage.health > 0 and other.collider.intersects player.collider
         other.impact? player, Δt
 
     if player.forcefield-active and not player.dead
@@ -241,14 +226,14 @@ play-test-frame = (Δt, time) ->
       #shaker.trigger 2/player-count, 0.1
 
     if player.damage.health <= 0 and not player.dead
-      effects.push new Explosion player.pos, 3, player.explosion-tint-color
+      effects.push new Explosion player.physics.pos, 3, player.explosion-tint-color
       player.kill!
       for enemy in enemies
         enemy.fire-target = null
 
     for laser in player.lasers
       for enemy in enemies
-        if laser.box.intersects enemy.box
+        if laser.collider.intersects enemy.collider
           laser.impact enemy, Δt
           enemy.last-hit = player
           check-destroyed enemy, player, Δt
@@ -327,22 +312,6 @@ crowding-test-frame = (Δt, time) ->
 
 # Test laser effect
 
-class Timer
-  (@target, @active = no) ->
-    @current = 0
-
-  update: (Δt, time) ->
-    if @active
-      @current += Δt
-
-      if @current > @target
-        @current %= @target
-        @active = no
-
-  get-progress: ->
-    @current/@target
-
-
 { Laser } = require \./bullet
 
 laser-timer = new Timer 4
@@ -352,9 +321,9 @@ laser-effect-frame = (Δt, time) ->
   shaker.update Δt
   laser-timer.update Δt
 
-  if not laser-timer.active
+  if laser-timer.elapsed
     players.0.laser shaker
-    laser-timer.active = yes
+    laser-timer.reset!
 
   for player, i in players
     player.update Δt, time
@@ -387,14 +356,15 @@ KEY_C = 67
 SPACE = 32
 ESCAPE = 27
 
-my-player-index = 2
+my-player-index = 0
 
 document.add-event-listener \keydown, ({ which }:event) ->
   switch which
   | ESCAPE => frame-driver.toggle!
   | ENTER  => players.map (.unkill!)
   | SPACE  => players[my-player-index].forcefield-active = yes
-  | KEY_Z  => players[my-player-index].laser shaker
+  #| KEY_Z  => players[my-player-index].laser shaker
+  | KEY_Z  => players.map (.laser shaker)
   | KEY_C  => players[my-player-index].beam-vortex-active = yes
   | _  => return event
   event.prevent-default!
@@ -420,6 +390,11 @@ main-canvas.canvas.add-event-listener \mousemove, ({ pageX, pageY }) ->
 
 frame-driver = new FrameDriver
 frame-driver.on-frame render-frame
-frame-driver.on-tick play-test-frame
+frame-driver.on-tick ->
+  try
+    play-test-frame ...
+  catch exception
+    frame-driver.stop!
+    throw exception
 frame-driver.start!
 

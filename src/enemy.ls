@@ -1,15 +1,14 @@
 
 { id, log, box, floor, physics, rnd, v2 } = require \std
 
-{ CollisionRadius } = require \./collision-box
+{ RadialCollider } = require \./collider
+{ EnemyBullet }    = require \./bullet
+{ Physics }        = require \./physics
+{ Timer }          = require \./timer
 
-{ EnemyBullet } = require \./bullet
-
-{ sprite } = require \./sprite
-
-
+{ sprite }  = require \./sprite
 small  = sprite \/assets/enemy-small.svg, 200
-medium = sprite \/assets/enemy-med.svg, 200
+medium = sprite \/assets/enemy-med.svg,   200
 
 
 #
@@ -29,13 +28,12 @@ export class Enemy
   sprite-size = [ 20, 20 ]
   sprite-offset = sprite-size `v2.scale` 0.5
 
-  (@pos = [0 0]) ->
-    @box = new CollisionRadius @pos.0, @pos.1, 10
-    @vel = [0 0]
-    @acc = [0 -50 - rnd 50]
+  (pos = [0 0]) ->
+    @physics = new Physics p:pos, a:[0 -50 - rnd 50], f:0.95
+    @collider = new RadialCollider pos.0, pos.1, 10
     @type = \small
     @bullets = []
-    @friction = 0.95
+    @box = @collider
 
     # Damage component
     @damage =
@@ -43,63 +41,56 @@ export class Enemy
       max-hp: 10
       alive: yes
 
-    @fire-timer =
-      target-time: fire-rate
-      current-time: 0
-
+    @fire-timer  = new Timer fire-rate
     @fire-target = null
+
     @wreckage-sprite = sprite \/assets/chunk-enemy.svg, 100
 
   update: (Δt, time) ->
     @bullets := @bullets.filter (.update Δt)
-    @fire-timer.current-time += Δt
+    @fire-timer.update Δt
     @point-at-target @fire-target
 
-    if @fire-timer.current-time >= @fire-timer.target-time
-      @fire-timer.current-time %= @fire-timer.target-time
-      if @fire-target
-        @shoot-at @fire-target.pos
+    if @fire-timer.elapsed and @fire-target
+      @shoot-at @fire-target
+      @fire-timer.reset!
 
-    physics this, Δt
+    @physics.update Δt
     @confine-to-bounds!
-    @box.move-to @pos
+    @collider.move-to @physics.pos
 
   point-at-target: (target = @fire-target) ->
     if target
-      xx = target.pos.0 - @pos.0
-      yy = target.pos.1 - @pos.1
-      @rotation = Math.asin -xx/v2.hyp [ xx, yy ]
+      @rotation = @physics.get-bearing-to target.physics.pos
 
   confine-to-bounds: ->
     bord-z = board-size.1 * 0.5
-    if @pos.0 >  board-size.0 - border then @pos.0 =  board-size.0 - border
-    if @pos.0 < -board-size.0 + border then @pos.0 = -board-size.0 + border
-    if @pos.1 >  board-size.1 - border then @pos.1 =  board-size.1 - border
-    if @pos.1 < -board-size.1 + bord-z then @pos.1 = -board-size.1 + bord-z
+    if @physics.pos.0 >  board-size.0 - border then @physics.pos.0 =  board-size.0 - border
+    if @physics.pos.0 < -board-size.0 + border then @physics.pos.0 = -board-size.0 + border
+    if @physics.pos.1 >  board-size.1 - border then @physics.pos.1 =  board-size.1 - border
+    if @physics.pos.1 < -board-size.1 + bord-z then @physics.pos.1 = -board-size.1 + bord-z
 
-  move-to: (@pos) ->
-    @box.move-to @pos
+  move-to: (pos) ->
+    @physics.pos <<< pos
+    @collider.move-to pos
 
   draw: (ctx) ->
     return if not @damage.alive
     @bullets.map (.draw ctx)
-    ctx.sprite small, @pos, sprite-size, offset: sprite-offset, rotation: @rotation
-    #@box.draw ctx
+    ctx.sprite small, @physics.pos, sprite-size, offset: sprite-offset, rotation: @rotation
 
-  shoot-at: (pos) ->
-    xx = pos.0 - @pos.0
-    yy = pos.1 - @pos.1
-    bearing = v2.norm pos `v2.sub` @pos
-
-    bullet = new EnemyBullet [ @pos.0 + 0.04, @pos.1 ]
-    bullet.vel = bearing `v2.scale` bullet-speed
-    bullet.acc = [ 0 0 ]
-
+  shoot-at: (target) ->
+    bearing = v2.norm target.physics.pos `v2.sub` @physics.pos
+    bullet = new EnemyBullet @physics.pos, bearing `v2.scale` bullet-speed
+      #bullet.physics.vel =
     @bullets.push bullet
 
 
+#
+# Big Version
+#
 
-export class BigEnemy
+export class BigEnemy extends Enemy
 
   { board-size } = require \config
 
@@ -110,15 +101,11 @@ export class BigEnemy
   bullet-speed = 200
   sprite-offset = sprite-size `v2.scale` 0.5
 
-  (@pos = [0 0]) ->
+  (pos = [0 0]) ->
     @w = 40
-    @box = new CollisionRadius @pos.0, @pos.1, @w
-    @bullets = []
+    super ...
     @type = \large
-    @vel = [0 0]
-    @acc = [0 -50 - rnd 50]
-
-    @friction = 0.95
+    @physics.fri = 0.95
 
     # Damage component
     @damage =
@@ -126,57 +113,27 @@ export class BigEnemy
       max-hp: 100
       alive: yes
 
-    @fire-timer =
-      target-time: fire-rate
-      current-time: 0
-
-    @fire-target = null
+    @fire-timer  = new Timer fire-rate
 
     @wreckage-sprite = sprite \/assets/chunk-enemy.svg, 100
-    @rotation = 0
 
-  update: (Δt, time) ->
-    @bullets := @bullets.filter (.update Δt)
-    @fire-timer.current-time += Δt
-
-    if @fire-timer.current-time >= @fire-timer.target-time
-      @fire-timer.current-time %= @fire-timer.target-time
-      if @fire-target
-        @shoot-at @fire-target.pos
-
-    physics this, Δt
-    @confine-to-bounds!
-    @box.move-to @pos
-
-  confine-to-bounds: ->
-    bord-z = board-size.1 * 0.5
-    if @pos.0 >  board-size.0 - border then @pos.0 =  board-size.0 - border
-    if @pos.0 < -board-size.0 + border then @pos.0 = -board-size.0 + border
-    if @pos.1 >  board-size.1 - border then @pos.1 =  board-size.1 - border
-    if @pos.1 < -board-size.1 + bord-z then @pos.1 = -board-size.1 + bord-z
-
-  move-to: (@pos) ->
-    @box.move-to @pos
+  move-to: (pos) ->
+    @physics.move-to pos
+    @box.move-to pos
 
   draw: (ctx) ->
     return if not @damage.alive
     @bullets.map (.draw ctx)
-    ctx.sprite medium, @pos, sprite-size, offset: sprite-offset, rotation: @rotation
-    #@box.draw ctx
+    ctx.sprite medium, @physics.pos, sprite-size, offset: sprite-offset, rotation: @rotation
 
-  shoot-at: (pos) ->
-    xx = pos.0 - @pos.0
-    yy = pos.1 - @pos.1
-    bearing = v2.norm pos `v2.sub` @pos
-    @rotation = Math.asin -xx/v2.hyp [ xx, yy ]
+  shoot-at: (target) ->
+    bearing = v2.norm target.physics.pos `v2.sub` @physics.pos
 
-    bullet = new EnemyBullet [ @pos.0 + @w/2, @pos.1 ]
-    bullet.vel = bearing `v2.scale` bullet-speed
-    bullet.acc = [ 0 0 ]
+    bullet = new EnemyBullet [ @physics.pos.0 + @w/2, @physics.pos.1 ]
+    bullet.physics.vel = bearing `v2.scale` bullet-speed
     @bullets.push bullet
 
-    bullet = new EnemyBullet [ @pos.0 - @w/2, @pos.1 ]
-    bullet.vel = bearing `v2.scale` bullet-speed
-    bullet.acc = [ 0 0 ]
+    bullet = new EnemyBullet [ @physics.pos.0 - @w/2, @physics.pos.1 ]
+    bullet.physics.vel = bearing `v2.scale` bullet-speed
     @bullets.push bullet
 

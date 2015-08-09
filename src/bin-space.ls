@@ -5,21 +5,14 @@ export class BinSpace
 
   { board-size } = require \config
 
-  (@cols, @rows, @color = \red) ->
-
+  (@cols, @rows, @color = \blue) ~>
+    log "New BinSpace", @cols, @rows
+    @bins = @init-bins!
     @bin-size = [ board-size.0 * 2/@cols, board-size.1 * 2/@rows ]
 
-    @bins =
-      for y from 0 til @rows
-        for x from 0 til @cols
-          []
+  clear: -> @init-bins!
 
-  bin-address: (pos) ->
-    x = floor (-board-size.0 + pos.0) / @bin-size.0 + @cols
-    y = floor (-board-size.1 - pos.1) / @bin-size.1 + @rows
-    [x, y]
-
-  clear: ->
+  init-bins: ->
     @bins = [ [ [] for x from 0 til @cols ] for y from 0 til @rows ]
 
   draw: (ctx) ->
@@ -34,32 +27,40 @@ export class BinSpace
           ], @bin-size
     ctx.ctx.global-alpha = 1
 
-  assign-bin: ({pos}:entity) ->
-    [x, y] = @bin-address pos
-    @bins[y]?[x]?.push entity
+  get-bin: (x, y) ->
+    #log \get, x, y
+    if x < 0 or x >= @cols
+      []
+    else if y < 0 or y >= @rows
+      []
+    else
+      @bins[y][x]
 
-  get-bin-collisions: ({pos}:entity) ->
-    [x, y] = @bin-address pos
-    members = @bins[y][x]
+  bin-address: ([ x, y ]) ->
+    #log \addre, x, y, board-size, @bin-size, @cols, @rows
+    [ (floor (-board-size.0 + x) / @bin-size.0 + @cols),
+      (floor (-board-size.1 - y) / @bin-size.1 + @rows) ]
 
-    if y > 0
-      members = members.concat @bins[y-1][x]
-      if x > 0
-        members = members.concat @bins[y-1][x-1]
-      if x < @cols - 1
-        members = members.concat @bins[y-1][x+1]
+  assign-bin: (entity) ->
+    #log \assign, entity
+    [x, y] = @bin-address entity.physics?.pos
+    #log \assign, x, y, entity
+    @get-bin(x, y).push entity
 
-    if x > 0
-      members = members.concat @bins[y][x-1]
-    if x < @cols - 1
-      members = members.concat @bins[y][x+1]
+  get-bin-collisions: (entity) ->
+    [x, y] = @bin-address entity.physics?.pos
+    #log \collision, x, y
+    @accumulate-neighbours x, y
 
-    if y < @rows - 1
-      members = members.concat @bins[y+1][x]
-      if x > 0
-        members = members.concat @bins[y+1][x-1]
-      if x < @cols - 1
-        members = members.concat @bins[y+1][x+1]
-
-    return members
+  accumulate-neighbours: (x, y) ->
+    #log \accum, x, y
+    [].concat @get-bin x - 1, y - 1
+      .concat @get-bin x,     y - 1
+      .concat @get-bin x - 1, y - 1
+      .concat @get-bin x - 1, y
+      .concat @get-bin x,     y
+      .concat @get-bin x + 1, y
+      .concat @get-bin x,     y + 1
+      .concat @get-bin x - 1, y + 1
+      .concat @get-bin x + 1, y + 1
 
