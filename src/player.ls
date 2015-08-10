@@ -15,13 +15,13 @@ weapon-specs =
     dps: 100
   * num: 2
     dps: 200
-  * num: 2
-    dps: 400
   * num: 3
+    dps: 400
+  * num: 4
     dps: 800
-  * num: 4
+  * num: 5
     dps: 1600
-  * num: 4
+  * num: 5
     dps: 3200
 
 
@@ -63,9 +63,14 @@ export class Player
     @palette = Palette[palette-index-assignment[@index]]
     @sprite = palette-sprite color-map, lumin-map, @palette.paintjob, 200
 
-    # Weapon level
-    @weapon-level = @index  # DEBUG
-    spec = weapon-specs[@index]
+    @set-weapon-level 0
+
+  level-up-weapon: ->
+    @set-weapon-level @weapon-level + 1
+
+  set-weapon-level: (n) ->
+    @weapon-level = n
+    spec = weapon-specs[@weapon-level]
     @weapon-multi = spec.num
     @bullet-timer.target = 1/spec.dps * 10 * spec.num
 

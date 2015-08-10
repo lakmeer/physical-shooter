@@ -52,7 +52,7 @@ wave-size = do (n = start-wave-size, x = 0) ->*
   while true
     yield [ n += 1, floor x += 0.2 ]
 
-wave-complete-timer = new OneShotTimer 1
+wave-complete-timer = new OneShotTimer 3
 
 
 # Homeless functions
@@ -372,6 +372,7 @@ document.add-event-listener \keydown, ({ which }:event) ->
   | SPACE  => players[my-player-index].forcefield-active = yes
   | KEY_Z  => players[my-player-index].laser shaker
   #| KEY_Z  => players.map (.laser shaker)
+  | KEY_X  => players[my-player-index].level-up-weapon!
   | KEY_C  => players[my-player-index].beam-vortex-active = yes
   | _  => return event
   event.prevent-default!

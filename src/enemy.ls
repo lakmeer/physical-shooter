@@ -113,8 +113,8 @@ export class BigEnemy extends Enemy
 
     # Damage component
     @damage =
-      health: 10
-      max-hp: 10
+      health: 100
+      max-hp: 100
       alive: yes
 
     @fire-timer  = new Timer fire-rate
