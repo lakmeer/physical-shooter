@@ -5,6 +5,8 @@ export log = -> console.log.apply console, &; &0
 
 export raf = window.request-animation-frame
 
+export lerp = (a, t, b) -> a + t * (b - a)
+
 export floor = Math.floor
 
 export sqrt = Math.sqrt

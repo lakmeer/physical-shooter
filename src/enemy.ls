@@ -26,7 +26,7 @@ export class Enemy
   { board-size } = require \config
 
   border = 10
-  fire-rate = 0.5
+  fire-rate = 0.6
   bullet-speed = 200
   sprite-size = [ 20, 20 ]
   sprite-offset = sprite-size `v2.scale` 0.5
@@ -46,6 +46,7 @@ export class Enemy
       alive: yes
 
     @fire-timer  = new Timer fire-rate
+    #@fire-timer.current = Math.random! * fire-rate
     @fire-target = null
     @wreckage-sprite = sprite \/assets/chunk-enemy.svg, 100
 
@@ -138,9 +139,11 @@ export class BigEnemy extends Enemy
 
     bullet = new EnemyBullet this, left-pos
     bullet.physics.vel = left-bearing `v2.scale` bullet-speed
+    bullet.alt = true
     @bullets.push bullet
 
     bullet = new EnemyBullet this, right-pos
     bullet.physics.vel = right-bearing `v2.scale` bullet-speed
+    bullet.alt = true
     @bullets.push bullet
 

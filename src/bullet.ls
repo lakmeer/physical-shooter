@@ -63,8 +63,8 @@ export class PlayerBullet extends Bullet
   ->
     @w = 2
     super ...
-    @state.quota = 1
-    @state.power = 20
+    @state.quota = 5
+    @state.power = 100
     @physics.add-vel [0 100]
     @physics.set-acc [(random-range -5, 5), 1000]
 
@@ -95,11 +95,12 @@ export class EnemyBullet extends Bullet
   { board-size } = require \config
 
   (@owner, pos) ->
-    @w        = 5
+    @w        = 4
     super ...
     @physics  = new Physics p:pos, f:1
     @stray    = no
     @color    = -> \white
+    @alt      = no
 
     @collection-speed = 0
 
@@ -116,7 +117,13 @@ export class EnemyBullet extends Bullet
     if @stray
       @color
     else
-      "rgb(#{ 255 - floor 255 * @state.spent/@state.quota },255,255)"
+      if @alt
+        \white
+      else
+        p = @state.spent/@state.quota
+        g = 255 - 155 * p
+        t = 150 * (1 - p)
+        "rgb(#t, #g, #t)"
 
   update-stray: (Δt, owner) ->
     diff = owner.physics.pos `v2.sub` @physics.pos
@@ -134,10 +141,10 @@ export class EnemyBullet extends Bullet
 
   draw: ->
     if @stray
-      it.ctx.global-alpha = 0.7
+      it.ctx.global-alpha = 0.5
       it.set-color @derive-color!
       it.circle @physics.pos, @w * 2
-      it.ctx.global-alpha = 0.5
+      it.ctx.global-alpha = 0.4
       it.set-color \white
       it.circle @physics.pos, @w * 2 * 0.7
       it.ctx.global-alpha = 1

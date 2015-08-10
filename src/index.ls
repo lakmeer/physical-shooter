@@ -30,9 +30,9 @@ blast-force        = 20000
 blast-force-large  = 100000
 beam-attract-force = -100000
 repulse-force      = 10000
-start-wave-size    = 20
+start-wave-size    = 10
 effects-limit      = 50
-player-count       = 6
+player-count       = 1
 
 shaker           = new ScreenShake
 effects          = new EffectsDriver effects-limit
@@ -48,11 +48,11 @@ pickups = []
 
 main-canvas.install document.body
 
-wave-size = do (n = start-wave-size, x = 1) ->*
+wave-size = do (n = start-wave-size, x = 0) ->*
   while true
     yield [ n += 1, floor x += 0.2 ]
 
-wave-complete-timer = new OneShotTimer 3
+wave-complete-timer = new OneShotTimer 1
 
 
 # Homeless functions

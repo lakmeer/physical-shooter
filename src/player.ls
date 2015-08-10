@@ -12,17 +12,17 @@ Palette = require \./player-palettes
 
 weapon-specs =
   * num: 1
-    dps: 10
-  * num: 1
-    dps: 20
-  * num: 1
-    dps: 40
+    dps: 100
   * num: 2
-    dps: 80
+    dps: 200
+  * num: 2
+    dps: 400
   * num: 3
-    dps: 160
-  * num: 5
-    dps: 320
+    dps: 800
+  * num: 4
+    dps: 1600
+  * num: 4
+    dps: 3200
 
 
 #

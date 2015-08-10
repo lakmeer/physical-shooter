@@ -1,5 +1,7 @@
 
-{ id, log, floor } = require \std
+{ id, log, tau, floor, random-range } = require \std
+
+{ sprite }  = require \./sprite
 
 
 #
@@ -10,58 +12,60 @@
 
 export class Backdrop
 
-  speed = 600
+  { board-size, screen-size, scale-factor } = require \config
 
-  { board-size, screen-size } = require \config
+  speed = 30
 
-  { sprite }  = require \./sprite
+  star-count = 200
 
-  color-a = [ 165 27 25 ]
-  color-b = [ 189 42 28 ]
+  bg-width  = 1200
+  bg-height = 3840
+  bg-aspect = bg-width / bg-height
+  bgh       = screen-size.0 / bg-aspect
 
-  lerp = (a, t, b) -> a + t * (b - a)
-
-  bg = sprite \/assets/bg.jpg, 3860
+  bg  = sprite \/assets/bg.jpg, bg-width, bg-height
 
   ->
-    @offset = 0
-    @gap    = 50
+    @scroll = 0
+    @travel = 0
 
-  derive-color: (p) ->
-    h = floor lerp color-b.0, p, color-a.0
-    s = floor lerp color-b.1, p, color-a.1
-    l = floor lerp color-b.2, p, color-a.2
-    "hsl(#h,#s%,#l%)"
+    @stars = @generate-stars!
 
-  draw: (ctx) ->
+  generate-stars: ->
+    for i from 0 to star-count
+      x: random-range 0, screen-size.0
+      y: random-range 0, screen-size.1
+      z: random-range 1, 10
+      r: random-range 0.5, 2
 
-    ctx.sprite bg, [ -board-size.0, board-size.1 + @offset + board-size.1 * 8 ], [ board-size.0 * 2, board-size.1 * 10 ]
+  draw-star: ({ x, y, r }, ctx) ->
+    ctx.fill-style = \white
+    ctx.global-alpha = 0.7
+    ctx.begin-path!
+    ctx.arc x, y, r/scale-factor, 0, tau
+    ctx.close-path!
+    ctx.fill!
+    ctx.global-alpha = 1
 
-    return
+  draw: (ctx) ->   # Do work in screenspace
 
-    ctx.set-line-color @derive-color 0.4
-    for i from -board-size.1 to board-size.1 + @gap by @gap
-      y = i - @offset
-      ctx.line -board-size.0, y, board-size.0, y
+    offset = @scroll % bgh
 
-    x = board-size.0/2
+    ctx.ctx.global-alpha = 1
+    ctx.ctx.draw-image bg, 0, offset,       screen-size.0, bgh
+    ctx.ctx.draw-image bg, 0, offset - bgh, screen-size.0, bgh
+    ctx.ctx.global-alpha = 1
 
-    for i from -x to x by @gap
-      ctx.line  x + i, -board-size.1,  x + i, board-size.1
-      ctx.line -x - i, -board-size.1, -x - i, board-size.1
+    for star in @stars
+      star.y += @travel / bg-aspect * star.z
 
+      if star.y >= screen-size.1
+        star.y = -star.r
+        star.x = random-range 0, screen-size.0
+
+      @draw-star star, ctx.ctx
 
   update: (Δt, time, canvas) ->
-
-    @offset = time * -40
-
-    return
-
-    @offset += speed * Δt
-    if @offset >= @gap
-      @offset %= @gap
-
-    @gap = 50 + 15 * Math.sin time/2
-
-
+    @travel = speed * Δt
+    @scroll += @travel
 

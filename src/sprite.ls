@@ -33,9 +33,9 @@ render-svg = (svg, λ) ->
   img.onload = -> URL.revokeObjectURL url; λ img
   img.src = url
 
-luminosity-overlay = (ctx, size) -> (image) ->
+luminosity-overlay = (ctx, width, height) -> (image) ->
   ctx.global-composite-operation = \luminosity
-  ctx.draw-image image, 0, 0, size, size
+  ctx.draw-image image, 0, 0, width, height
   ctx.global-composite-operation = \source-over
 
 
@@ -43,12 +43,13 @@ luminosity-overlay = (ctx, size) -> (image) ->
 # Empty Sprite
 #
 
-empty-sprite = (size) ->
+empty-sprite = (width, height) ->
   blitter = document.create-element \canvas
-  blitter.width = blitter.height = size
+  blitter.width = width
+  blitter.height = height
   blitter.ctx = blitter.get-context \2d
-  blitter.draw = -> blitter.ctx.draw-image it, 0, 0, size, size
-  blitter.luminosity = luminosity-overlay blitter.ctx, size
+  blitter.draw = -> blitter.ctx.draw-image it, 0, 0, width, height
+  blitter.luminosity = luminosity-overlay blitter.ctx, width, height
   return blitter
 
 
@@ -56,9 +57,9 @@ empty-sprite = (size) ->
 # Simple Sprite
 #
 
-export sprite = (src, size) ->
-  blitter = empty-sprite size
-  image-loader src, (img) -> blitter.draw img
+export sprite = (src, width, height = width) ->
+  blitter = empty-sprite width, height
+  image-loader src, blitter~draw
   return blitter
 
 
@@ -71,8 +72,8 @@ export palette-sprite = (color-src, lumin-src, palette, size) ->
     color-loaded: no
     lumin-loaded: no
 
-  diffuse = empty-sprite size
-  overlay = empty-sprite size
+  diffuse = empty-sprite size, size
+  overlay = empty-sprite size, size
 
   svg-loader color-src, (svg) ->
     svg-apply-palette svg, palette
@@ -92,5 +93,5 @@ export palette-sprite = (color-src, lumin-src, palette, size) ->
     output.draw diffuse
     output.luminosity overlay
 
-  output = empty-sprite size
+  output = empty-sprite size, size
 
