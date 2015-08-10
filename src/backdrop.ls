@@ -1,6 +1,7 @@
 
 { id, log, floor } = require \std
 
+
 #
 # Backdrop Class
 #
@@ -9,14 +10,18 @@
 
 export class Backdrop
 
-  speed = 100
+  speed = 600
 
-  { board-size } = require \config
+  { board-size, screen-size } = require \config
 
-  color-a = [ 140 51 49 ]
-  color-b = [ 165 27 95 ]
+  { sprite }  = require \./sprite
+
+  color-a = [ 165 27 25 ]
+  color-b = [ 189 42 28 ]
 
   lerp = (a, t, b) -> a + t * (b - a)
+
+  bg = sprite \/assets/bg.jpg, 3860
 
   ->
     @offset = 0
@@ -29,6 +34,11 @@ export class Backdrop
     "hsl(#h,#s%,#l%)"
 
   draw: (ctx) ->
+
+    ctx.sprite bg, [ -board-size.0, board-size.1 + @offset + board-size.1 * 8 ], [ board-size.0 * 2, board-size.1 * 10 ]
+
+    return
+
     ctx.set-line-color @derive-color 0.4
     for i from -board-size.1 to board-size.1 + @gap by @gap
       y = i - @offset
@@ -41,9 +51,17 @@ export class Backdrop
       ctx.line -x - i, -board-size.1, -x - i, board-size.1
 
 
-  update: (Δt, time) ->
+  update: (Δt, time, canvas) ->
+
+    @offset = time * -40
+
+    return
+
     @offset += speed * Δt
     if @offset >= @gap
       @offset %= @gap
 
     @gap = 50 + 15 * Math.sin time/2
+
+
+

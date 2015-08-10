@@ -1,5 +1,5 @@
 
-export scale-factor = 2
+export scale-factor = 1
 
 export screen-aspect = 16/9 # screen-size.1/screen-size.0
 

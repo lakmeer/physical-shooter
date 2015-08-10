@@ -90,7 +90,7 @@ export class PlayerBullet extends Bullet
 export class EnemyBullet extends Bullet
 
   range = 10
-  collection-ramp-up = 25
+  collection-ramp-up = 10
 
   { board-size } = require \config
 

@@ -26,11 +26,11 @@
 
 # Init
 
-blast-force        = 50000
-blast-force-large  = 500000
+blast-force        = 20000
+blast-force-large  = 100000
 beam-attract-force = -100000
-repulse-force      = 5000
-start-wave-size    = 10
+repulse-force      = 10000
+start-wave-size    = 20
 effects-limit      = 50
 player-count       = 6
 
@@ -58,6 +58,7 @@ wave-complete-timer = new OneShotTimer 3
 # Homeless functions
 
 ids = -> if it is 0 then 0 else 1 / (it*it)
+idd = -> if it is 0 then 0 else 1 / (it)
 
 emit-force-blast = (force, self, others, Δt) ->
 
@@ -125,7 +126,7 @@ find-target = (enemy) ->
 check-destroyed = (enemy, owner, Δt) ->
   if enemy.damage.health <= 0 and enemy.damage.alive
     enemy.damage.alive = no
-    shaker.trigger 5, 0.2
+    shaker.trigger 10, 0.2
     pickups.push new CollectableStream enemy.bullets, owner
     effects.push new Explosion enemy.physics.pos, if enemy.type is \large then 2 else 1
     effects.push new Wreckage enemy.physics.pos, enemy.wreckage-sprite
@@ -133,14 +134,14 @@ check-destroyed = (enemy, owner, Δt) ->
     emit-force-blast force, enemy, enemies, Δt
 
 de-crowd = (self, others) ->
-  max-speed = 5
+  max-speed = 1
   effective-distance = if self.type is \large then 100 else 25
   for other in others
     diff = v2.sub other.physics.pos, self.physics.pos
     dist = v2.hyp diff
     dir  = v2.norm diff
     if dist < effective-distance
-      x = dir.0 * max-speed * ( dist/effective-distance)
+      x = dir.0 * max-speed * (dist/effective-distance)
       y = dir.1 * max-speed * (dist/effective-distance)
       #self.vel.0 -= x - 0.5 + rnd 1
       #self.vel.1 -= y - 0.5 + rnd 1
@@ -157,7 +158,7 @@ play-test-frame = (Δt, time) ->
   time *= time-factor
 
   # Update scene features
-  backdrop.update Δt, time
+  backdrop.update Δt, time, main-canvas.canvas
   shaker.update Δt
   effects.update Δt, time
 
@@ -215,7 +216,7 @@ play-test-frame = (Δt, time) ->
 
     if player.forcefield-active and not player.dead
       emit-force-blast repulse-force, player, enemies, Δt
-      shaker.trigger 1/player-count, 0.1
+      shaker.trigger 2/player-count, 0.1
 
     if player.beam-vortex-active
       emit-beam-blast beam-attract-force, player, enemies, Δt
@@ -299,7 +300,7 @@ crowding-test-frame = (Δt, time) ->
   for player in players
     if player.forcefield-active and not player.dead
       emit-force-blast repulse-force, player, enemies, Δt
-      shaker.trigger 5/player-count, 0.1
+      shaker.trigger 10/player-count, 0.1
 
 
 # Test laser effect

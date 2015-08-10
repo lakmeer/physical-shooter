@@ -1,7 +1,11 @@
 
-{ id, log, rnd, delay } = require \std
+{ id, log, rnd, delay, v2 } = require \std
 
 export class ScreenShake
+
+  { scale-factor } = require \config
+
+  log scale-factor
 
   shake = ->
     (0.5 - rnd 1) * 2 * rnd it
@@ -37,5 +41,5 @@ export class ScreenShake
     delay wait*1000, this.trigger.bind this, amount, time
 
   get-offset: ->
-    @offset
+    @offset `v2.scale` (1/scale-factor)
 

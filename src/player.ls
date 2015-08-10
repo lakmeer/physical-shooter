@@ -53,8 +53,8 @@ export class Player
     @auto-move = yes
     @score     = 0
     @damage =
-      health: 200
-      max-hp: 200
+      health: 1000
+      max-hp: 1000
 
     @forcefield-phase = 0
     @forcefield-active = no
