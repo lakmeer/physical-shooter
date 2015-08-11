@@ -90,7 +90,7 @@ function becomeMaster () {
   reportPlayers();
   master = this;
 
-  // Aipe auth table
+  // Wipe auth table
   allPlayers = {};
 };
 
@@ -178,6 +178,7 @@ setInterval(function checkLastSeen () {
   players.forEach(function (player) {
     if (!player.free && (now - player.lastSeen) > playerTimeout) {
       log('Player index expired:', player.index);
+      reportPlayers();
       freePlayer(player.index);
     }
   });

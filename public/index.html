@@ -3,27 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <title>Ghost Squadron</title>
-  <meta name="viewport" content="width=device-width">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
 
   <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+    }
+
     body {
       background: black;
       margin: 0;
       padding: 0;
     }
 
-    canvas {
-      -ms-interpolation-mode:nearest-neighbor;
-      image-rendering: -moz-crisp-edges;
-      image-rendering: -o-crisp-edges;
-      image-rendering: -webkit-optimize-contrast;
-      image-rendering: pixelated;
-      box-shadow: 0 0 0 2px black;
-      display: block;
-    }
-
     div {
       position: absolute;
+      top: 0;
+      width: 100vw;
+      heighT: 100vh;
     }
 
     #controls {
@@ -32,26 +30,59 @@
       left: 0;
       top: 0;
       background: lightgreen;
+      display: none;
     }
 
-    #steering {
-      height: 100vh;
-      right: 0;
-      top: 0;
-      width: 50vw;
+    #selector > div {
+      position: absolute;
+      width:  25vh;
+      height: 25vh;
+      left: 50%;
+      top: 50%;
     }
 
+    #selector canvas {
+      max-width: 100%;
+      display: block;
+    }
 
+    /* Landscape mode warning */
+    #warning {
+      display: none;
+      z-index: 10;
+      font-size: 14vw;
+      color: white;
+      font-family: monospace;
+      text-align: center;
+      line-height: 100vh;
+    }
 
+    @media only screen and (orientation:portrait) {
+      #warning { display:block; }
+      #interface { display: none; }
+    }
   </style>
 </head>
+
 <body>
-  <div id="steering"></div>
-  <div id="controls">
-    <div id="laser"></div>
-    <div id="vortex"></div>
-    <div id="forcefield"></div>
+  <div id="interface">
+    <div id="selector">
+      <div class="available" id="red"></div>
+      <div class="available" id="blue"></div>
+      <div class="available" id="green"></div>
+      <div class="available" id="magenta"></div>
+      <div class="available" id="cyan"></div>
+      <div class="available" id="yellow"></div>
+    </div>
+
+    <div id="controls">
+      <div id="laser"></div>
+      <div id="vortex"></div>
+      <div id="forcefield"></div>
+    </div>
   </div>
+
+  <div id="warning"> ROTATE! </div>
   <script src="client.js"></script>
 </body>
 </html>

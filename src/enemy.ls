@@ -63,6 +63,9 @@ export class Enemy
     @confine-to-bounds!
     @collider.move-to @physics.pos
 
+  assign-target: (target) ->
+    @fire-target = target
+
   point-at-target: (target = @fire-target) ->
     if target
       @rotation = @physics.get-bearing-to target.physics.pos

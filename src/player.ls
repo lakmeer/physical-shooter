@@ -11,7 +11,7 @@
 Palette = require \./player-palettes
 
 weapon-specs =
-  * num: 1
+  * num: 2
     dps: 100
   * num: 2
     dps: 200
@@ -35,13 +35,16 @@ export class Player
 
   { board-size } = require \config
 
-  max-speed     = 10000
+  max-speed     = 2000
   laser-rate    = 2
   bullet-rate   = 0.2
   sprite-size   = [ 30, 30 ]
   sprite-offset = sprite-size `v2.scale` 0.5
 
   palette-index-assignment = <[ red blue green magenta cyan yellow ]>
+
+  shells = 5
+  shell-gap = 30
 
   color-map = \/assets/ship-colormap.svg
   lumin-map = \/assets/ship-luminosity.svg
@@ -57,14 +60,19 @@ export class Player
       health: 1000
       max-hp: 1000
     @alive = yes
-    @forcefield-phase = 0
-    @forcefield-active = no
+
     @laser-timer  = new Timer laser-rate
     @bullet-timer = new RecurringTimer bullet-rate
     @palette = Palette[palette-index-assignment[@index]]
     @sprite = palette-sprite color-map, lumin-map, @palette.paintjob, 200
     @destination-pos = [ @physics.pos.0, @physics.pos.1 ]
 
+    @state =
+      laser-active: no
+      vortex-active: no
+      forcefield-active: no
+
+    @forcefield-phase = 0
     @set-weapon-level 0
 
   level-up-weapon: ->
@@ -98,7 +106,8 @@ export class Player
 
   draw-ship: (ctx) ->
     if not @alive then return
-    @draw-forcefield ctx if @forcefield-active
+    if @state.forcefield-active
+      @draw-forcefield ctx
     ctx.sprite @sprite, @physics.pos, sprite-size, offset: sprite-offset
 
   draw: (ctx) ->
@@ -108,25 +117,26 @@ export class Player
     @draw-ship ctx
 
   draw-forcefield: (ctx) ->
-    shells = 4
-    shell-gap = 20
     max-diam = 10 + shells * shell-gap
     ctx.set-line-color \white
+
+    diam = 50
+    ctx.ctx.global-alpha = 1 - (@forcefield-phase % shell-gap) / shell-gap
+    ctx.circle @physics.pos, diam
+
     for shell from 0 til shells
-      diam = 10 + shell * shell-gap + @forcefield-phase % shell-gap
+      diam = 50 + shell * shell-gap + @forcefield-phase % shell-gap
       ctx.ctx.global-alpha = 1 - diam/max-diam
       ctx.stroke-circle @physics.pos, diam
     ctx.ctx.global-alpha = 1
 
   laser: (shaker) ->
     if not @alive then return
-    if @laser-timer.active is no
-      @lasers.push new Laser this, [ @physics.pos.0, @physics.pos.1 ]
-      @laser-timer.active = yes
-      if shaker?
-        shaker.trigger-after 0.5, 10, 2.5
-      return true
-    return false
+    @lasers.push new Laser this, [ @physics.pos.0, @physics.pos.1 ]
+    @laser-timer.active = yes
+    if shaker?
+      shaker.trigger-after 0.5, 10, 2.5
+    return true
 
   collect: (item) ->
     item.collected = yes
@@ -137,13 +147,16 @@ export class Player
 
     pos = @physics.pos
 
-    @forcefield-phase += Δt * 40
-
+    # Update projectiles
     @bullets = @bullets.filter (.update Δt)
-    @lasers  = @lasers.filter  (.update Δt, pos)
-
-    @laser-timer.update Δt
     @bullet-timer.update Δt
+
+    # Update special weapons
+    @lasers  = @lasers.filter  (.update Δt, pos)
+    if @lasers.length is 0
+      @deactivate-laser!
+    @laser-timer.update Δt
+    @forcefield-phase += Δt * 200
 
     if @bullet-timer.elapsed => @shoot!
 
@@ -161,7 +174,7 @@ export class Player
 
   shoot: ->
     if not @alive then return
-    if @laser-is-active then return
+    if @state.laser-active or @state.forcefield-active or @state.vortex-active then return
 
     jiggle = [ (random-range -1, 1), (random-range -1, 1) ]
     source = @physics.pos `v2.add` jiggle
@@ -196,11 +209,31 @@ export class Player
       @bullets.push new PlayerBullet this, (multi3-right `v2.add` source), (multi3-right `v2.scale` 5)
 
   activate-laser: ->
+    if not @state.laser-active
+      @state.laser-active = yes
+      @laser!
+      @deactivate-vortex!
+      @deactivate-forcefield!
+
   activate-forcefield: ->
-  activate-beam-vortex: ->
+    if not @state.laser-active
+      @state.forcefield-active = yes
+      @deactivate-vortex!
+
+  activate-vortex: ->
+    if not @state.laser-active
+      @state.vortex-active = yes
+      @deactivate-forcefield!
 
   deactivate-laser: ->
-  deactivate-forcefield: ->
-  deactivate-beam-vortex: ->
+    @state.laser-active = no
 
+  deactivate-forcefield: ->
+    @state.forcefield-active = no
+
+  deactivate-vortex: ->
+    @state.vortex-active = no
+
+  cleanup: ->
+    # TODO: Cleanup projectiles if I die
 

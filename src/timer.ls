@@ -25,6 +25,10 @@ export class Timer
   get-progress: ->
     @current/@target
 
+  start: ->
+    @active = yes
+    @elapsed = no
+
   reset: ->
     if @current > @target
       @current %= @target

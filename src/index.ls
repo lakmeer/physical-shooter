@@ -1,7 +1,7 @@
 
 # Require
 
-{ id, log, min, v2, rnd, pi, floor, delay, wrap, limit } = require \std
+{ id, log, min, v2, rnd, pi, floor, delay, wrap, limit, random-from } = require \std
 
 { FrameDriver } = require \./frame-driver
 { Blitter }     = require \./blitter
@@ -29,7 +29,7 @@
 blast-force        = 20000
 blast-force-large  = 100000
 beam-attract-force = -100000
-repulse-force      = 10000
+repulse-force      = 20000
 start-wave-size    = 10
 effects-limit      = 50
 player-count       = 6
@@ -94,7 +94,6 @@ emit-beam-blast = (force, self, others, Δt) ->
     else
       target.physics.vel.0 += -xx * force * Δt * ids xx
 
-
   for other in others when other isnt self
     draw other
     if other.bullets
@@ -110,7 +109,6 @@ new-wave = (n) ->
 
   for i from 0 til small
     enemy = new Enemy [ x, y ]
-      #enemy.fire-target = players.0
     enemies.push enemy
 
   for i from 0 til big
@@ -118,9 +116,6 @@ new-wave = (n) ->
       #enemy.fire-target = players.0
     enemies.push enemy
 
-find-target = (enemy) ->
-  # TODO: this
-  enemy.fire-target = null
 
 check-destroyed = (enemy, owner, Δt) ->
   if enemy.damage.health <= 0 and enemy.damage.alive
@@ -131,6 +126,7 @@ check-destroyed = (enemy, owner, Δt) ->
     effects.push new Wreckage enemy.physics.pos, enemy.wreckage-sprite
     force = if enemy.type is \large then blast-force-large else blast-force
     emit-force-blast force, enemy, enemies, Δt
+
 
 de-crowd = (self, others) ->
   max-speed = 1
@@ -187,9 +183,12 @@ play-test-frame = (Δt, time) ->
   # Update enemies and their bullets
   for enemy in enemies
     crowd-bin-space.assign-bin enemy
+
     if enemy.damage.alive
       enemy.update Δt, time
-      find-target enemy
+
+      if not enemy.fire-target
+        enemy.assign-target random-from players
 
       for bullet in enemy.bullets
         player-bin-space.assign-bin bullet
@@ -214,11 +213,11 @@ play-test-frame = (Δt, time) ->
       if player.damage.health > 0 and other.collider.intersects player.collider
         other.impact? player, Δt
 
-    if player.forcefield-active and player.alive
+    if player.state.forcefield-active and player.alive
       emit-force-blast repulse-force, player, enemies, Δt
       shaker.trigger 2/player-count, 0.1
 
-    if player.beam-vortex-active
+    if player.state.vortex-active
       emit-beam-blast beam-attract-force, player, enemies, Δt
 
     if player.damage.health <= 0 and player.alive
@@ -236,6 +235,7 @@ play-test-frame = (Δt, time) ->
 
     if not player.alive
       effects.push new Explosion player.physics.pos, 3
+      player.cleanup!
       shaker.trigger 10, 1
       return false
 
@@ -281,87 +281,68 @@ my-player-index = 0
 
 # Multiplayer
 
-class Pilot
-  (@player) ->
-    log "new Pilot for: ", @player
-    @bind-inputs!
-
-  bind-inputs: ->
-  kill-player: -> @player.kill!
-
-  auto-pilot: (time, i = @player.index) ->
-    m = Math.sin time + i * pi / 3
-    g = Math.cos time + i * pi / 6
-    @player.move-towards [ board-size.0 * 0.98 * m, -board-size.1 + board-size.1/3 + g * board-size.1/5 ]
-
-
-class AutomatedPilot extends Pilot
-
-  ->
-    super ...
-
-  receive-update-data: (x, y, command, time) ->
-    @auto-pilot time
-    return
-
-
-class LocalPilot extends Pilot
-  ->
-    super ...
-
-  bind-inputs: ->
-
-    player = @player
-
-    document.add-event-listener \keydown, ({ which }:event) ->
-      switch which
-      | SPACE  => player.activate-forcefield!
-      | KEY_Z  => player.activate-laser!
-      | KEY_X  => player.level-up-weapon!
-      | KEY_C  => player.activate-beam-vortex!
-      | _  => return event
-      event.prevent-default!
-      return false
-
-    document.add-event-listener \keyup, ({ which }:event) ->
-      switch which
-      | SPACE  => player.deactivate-forcefield!
-      | KEY_Z  => player.deactivate-laser!
-      | KEY_C  => player.deactivate-beam-vortex!
-      | _  => return event
-      event.prevent-default!
-      return false
-
-    main-canvas.canvas.add-event-listener \mousemove, ({ pageX, pageY }) ->
-      mouse  = [ pageX, pageY ]
-      dest   = main-canvas.screen-space-to-game-space mouse
-      player.move-towards dest
-
-
-class WebsocketPilot extends Pilot
-  ->
-    super ...
-
-  receive-update-data: (x, y, command, time) ->
-    @player.move-towards [
-      -board-size.0 + board-size.0 * 2 * x
-      board-size.1 - board-size.1 * 2 * y
-    ]
-
-
-class WebsocketConnection
-  ->
-
+{ LocalPilot, AutomatedPilot, WebsocketPilot } = require \./pilot
 
 autopilot-time = 0
 last-time = Date.now!
 
 
+class PlayerSpawn
+  (@player, @done) ->
+    @timer = new Timer 0.2
+    @timer.start!
+    @flash = 1
+
+  update: (Δt, time) ->
+    @timer.update Δt
+    if @timer.elapsed => @done!
+    return @timer.active
+
+  draw: (ctx) ->
+    @flash = 1 - @flash
+    p = @timer.get-progress!
+    t = 1 - p
+    tt = t*t
+    ttt = t*t*t
+    pp = 1 - tt
+    ppp = 1 - ttt
+
+    # Color overlay
+    ctx.ctx.global-composite-operation = \hue
+    ctx.set-color @player.palette.bullet-color 0
+    ctx.rect [ -board-size.0, board-size.1  ], [ board-size.0 * 2, board-size.1 * 2 ]
+
+    # Flashing
+    ctx.ctx.global-composite-operation = \source-over # overlay
+    ctx.ctx.global-alpha = @flash
+
+    # Cross Formation
+    offset-top  = pp * board-size.1
+    offset-left = pp * board-size.0
+    ctx.rect [ -board-size.0, board-size.1 - offset-top  ], [ board-size.0 * 2, board-size.1 * 2*tt ]
+    ctx.rect [ -board-size.0 + offset-left, board-size.1 ], [ board-size.0 * 2*tt, board-size.1 * 2 ]
+
+    ctx.set-color \white
+    offset-top  = ppp * board-size.1
+    offset-left = ppp * board-size.0
+    ctx.rect [ -board-size.0, board-size.1 - offset-top  ], [ board-size.0 * 2, board-size.1 * 2*ttt ]
+    ctx.rect [ -board-size.0 + offset-left, board-size.1 ], [ board-size.0 * 2*ttt, board-size.1 * 2 ]
+
+
+    # Restore context
+    ctx.ctx.global-composite-operation = \source-over
+    ctx.ctx.global-alpha = 1
+
+
 # Server callbacks
 
+on-connect = ->
+  player-server.emit \is-master
+
 on-player-joined = (index) ->
-  pilots[index] = new WebsocketPilot new Player index
-  players.push pilots[index].player
+  new-player = new Player index
+  pilots[index] = new WebsocketPilot new-player
+  effects.push new PlayerSpawn new-player, -> players.push new-player
 
 on-player-disconnected = (index) ->
   log "Player lost", index
@@ -377,15 +358,11 @@ on-player-update = (index, ...data) ->
 
 IO = require \socket.io-client
 
-player-server = IO \localhost:9999
-
-player-server.on \connect, ->
-  player-server.emit \is-master
-
+player-server = IO window.location.hostname + \:9999
+player-server.on \connect, on-connect
 player-server.on \pj, on-player-joined
 player-server.on \pd, on-player-disconnected
 player-server.on \p,  on-player-update
-
 
 
 # Debug Controls
@@ -396,8 +373,9 @@ document.add-event-listener \keydown, ({ which }:event) ->
   | ENTER  =>
     for i from 0 to 6
       if not pilots[i]
-        pilots[i] = new LocalPilot new Player i
-        players.push pilots[i].player
+        new-player = new Player i
+        pilots[i] = new LocalPilot new-player
+        effects.push new PlayerSpawn new-player, -> players.push new-player
         event.prevent-default!
         return false
 

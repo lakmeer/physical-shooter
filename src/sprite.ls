@@ -94,4 +94,7 @@ export palette-sprite = (color-src, lumin-src, palette, size) ->
     output.luminosity overlay
 
   output = empty-sprite size, size
+  output.greyscale = -> output.draw overlay
+
+  return output
 
