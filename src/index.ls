@@ -57,7 +57,7 @@ wave-size = do (n = start-wave-size, x = 0) ->*
   while true
     yield [ n += 1, floor x += 0.2 ]
 
-wave-complete-timer = new OneShotTimer 0
+wave-complete-timer = new OneShotTimer 3
 
 
 # Homeless functions
@@ -304,7 +304,7 @@ on-player-joined = (index) ->
   effects.push new PlayerSpawnEffect new-player, -> players.push new-player
 
 on-player-disconnected = (index) ->
-  pilots[index].kill-player!
+  pilots[index]?.kill-player!
   delete pilots[index]
 
 on-player-update = (index, ...data) ->
