@@ -177,6 +177,7 @@ setInterval(function checkLastSeen () {
     if (!player.free && (now - player.lastSeen) > playerTimeout) {
       log('Player index expired:', player.index);
       reportPlayers();
+      master.emit('pd', myPlayerIndex);
       freePlayer(player.index);
     }
   });

@@ -106,9 +106,6 @@ export class WebsocketPilot extends Pilot
       board-size.1 - board-size.1 * 2 * y
     ]
 
-    if command
-      log @player.index, command
-
     switch command  # 0 = no command this frame
     | 1 => @player.activate-laser!
     | 2 => @player.activate-forcefield!

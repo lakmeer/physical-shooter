@@ -29,7 +29,7 @@
       width: 40vw;
       left: 0;
       top: 0;
-      background: lightgreen;
+      z-index: 1;
       display: none;
     }
 
@@ -37,21 +37,9 @@
       position: relative;
       height: 33.333vh;
       width: 40vw;
-      box-shadow:
-        2px 2px  2px white inset,
-        -2px -2px 2px black inset;
-    }
-
-    #laser {
-      background: red;
-    }
-
-    #forcefield {
-      background: blue;
-    }
-
-    #vortex {
-      background: green;
+      border-bottom: 1px solid black;
+      border-right: 1px solid black;
+      background: rgba(0,0,0,0.4);
     }
 
     #selector > div {
