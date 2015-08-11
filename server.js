@@ -19,7 +19,8 @@ var Player = function (index) {
     color: colors[index],
     free: true,
     lastSeen: 0,
-    socket: null
+    socket: null,
+    isLocal: false
   };
 }
 
@@ -46,14 +47,22 @@ function freePlayer (playerIndex) {
   player.free = true;
   player.socket = null;
   player.lastSeen = 0;
+  player.isLocal = false;
 }
 
-function claimPlayer (playerIndex, socket) {
+function clearPlayers () {
+  for (var i in players) {
+    freePlayer(i);
+  }
+}
+
+function claimPlayer (playerIndex, socket, isLocal) {
   var player = players[playerIndex];
   if (player.free) {
     player.socket = socket;
     player.free = false;
     player.lastSeen = Date.now();
+    player.isLocal = !!isLocal;
     return true;
   }
   return false;
@@ -65,6 +74,7 @@ function isFree (player) {
 
 function createSelection (player) {
   return {
+    free: player.free,
     color: player.color,
     index: player.index
   };
@@ -73,12 +83,12 @@ function createSelection (player) {
 function reportPlayers () {
   log("Player Roster:");
   players.forEach(function (player) {
-    log("  " + player.index + ": " + (player.free ? "----" : "LIVE") + " (" + player.color + ")");
+    log("  " + player.index + ": " + (player.free ? "----" : "LIVE") + " (" + player.color + ")" + (player.isLocal ? " (local)" : ""));
   });
 }
 
 function sendAvailablePlayers () {
-  this.emit('available', players.filter(isFree).map(createSelection));
+  this.emit('available', players.map(createSelection));
 }
 
 function passSocket (socket, λ) {
@@ -88,12 +98,12 @@ function passSocket (socket, λ) {
 }
 
 function becomeMaster () {
-  log('MASTER PRESENT');
+  log('MASTER ATTACHED');
   reportPlayers();
   master = this;
-
-  // Wipe auth table
+  clearPlayers();
   clientIds = {};
+  sendAvailablePlayers.apply(io);
 };
 
 function becomePlayer () {
@@ -118,12 +128,25 @@ io.on('connection', function (socket) {
 
   // Player functions
 
+  socket.on('master-join', function onMasterJoin (playerIndex) {
+    log('Master join:', colors[playerIndex]);
+
+    if (claimPlayer(playerIndex, socket, true)) {
+      myPlayerIndex = playerIndex;
+      sendAvailablePlayers.apply(io);
+      reportPlayers();
+    } else {
+      log('Master tried to claim player ' + playerIndex + ' but it was taken');
+    }
+  });
+
   socket.on('join', function onJoin (playerIndex) {
     log('Player join:', colors[playerIndex]);
 
     if (claimPlayer(playerIndex, socket)) {
       myPlayerIndex = playerIndex;
       master.emit('pj', playerIndex);
+      sendAvailablePlayers.apply(io);
     } else {
       sendAvailablePlayers.apply(socket);
     }
@@ -174,7 +197,7 @@ setInterval(function checkLastSeen () {
   var now = Date.now();
 
   players.forEach(function (player) {
-    if (!player.free && (now - player.lastSeen) > playerTimeout) {
+    if (!player.free && !player.isLocal && (now - player.lastSeen) > playerTimeout) {
       log('Player index expired:', player.index);
       reportPlayers();
       master.emit('pd', player.index);

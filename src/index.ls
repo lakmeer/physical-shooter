@@ -329,6 +329,7 @@ add-local-player = (n) ->
   new-player = new Player n
   pilots[n] = new LocalPilot new-player
   effects.push new PlayerSpawnEffect new-player, -> players.push new-player
+  player-server.emit 'master-join', n
   return new-player
 
 

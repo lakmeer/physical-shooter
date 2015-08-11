@@ -60,9 +60,13 @@ export class UI
       @controls.release-inputs!
 
     | MODE_CAPTURE_INPUT =>
-      @controls.show!
       @selector.hide!
+      @controls.show!
       @controls.bind-inputs!
+
+  disconnected: ->
+    console.warn 'Connection lost'
+    @set-mode MODE_SELECT_PLAYER
 
 
 

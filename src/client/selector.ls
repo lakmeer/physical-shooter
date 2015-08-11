@@ -30,7 +30,7 @@ export class Selector
       sprite: ship-sprite Palette[color]
       greyed: ship-sprite Palette.grey
       palette: Palette[color]
-      available: no
+      free: no
 
     @state =
       selection: null
@@ -47,33 +47,36 @@ export class Selector
 
   save-selection: (index) -> ~>
     selection = @ships[index]
-    if selection.available
+    if selection.free
       @state.selection = index
 
   get-selection: ->
     if @state.selection? then @ships[that] else false
 
   set-available-colors: (options) ->
-    for let child, i in @dom.children
-      slot = options.filter (.index is i)
-      available = slot.length > 0
-      @ships[i].available = available
-      if available
-        @ships[i].sprite.style.display = \block
-        @ships[i].greyed.style.display = \none
-      else
-        @ships[i].sprite.style.display = \none
-        @ships[i].greyed.style.display = \block
+    log options
+    for option in options
+      @ships[option.index].free = option.free
 
   update: (Δt) ->
     @state.phase += Δt / 3
 
     for let child, i in @dom.children
+      @set-availability-state child, @ships[i]
       θ = @state.phase + (0.5 + i/@dom.children.length) * -tau
       x = -12.5 + 30 * Math.sin θ
       y = -12.5 + 30 * Math.cos θ
       child.style.margin-left = x + \vh
       child.style.margin-top  = y + \vh
+
+  set-availability-state: (child, ship) ->
+    if ship.free
+      ship.sprite.style.display = \block
+      ship.greyed.style.display = \none
+    else
+      ship.sprite.style.display = \none
+      ship.greyed.style.display = \block
+      ship.greyed.style.opacity = 0.6
 
   disconnected: ->
     # TODO: something when the client is disconnected
