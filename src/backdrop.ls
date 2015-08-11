@@ -28,8 +28,12 @@ export class Backdrop
   ->
     @scroll = 0
     @travel = 0
+    @offset = [0 0]
+    @stars  = @generate-stars!
 
-    @stars = @generate-stars!
+  set-offset: ([ x, y ]) ->
+    @offset.0 = x
+    @offset.1 = y
 
   generate-stars: ->
     for i from 0 to star-count
@@ -42,7 +46,7 @@ export class Backdrop
     ctx.fill-style = \white
     ctx.global-alpha = 0.7
     ctx.begin-path!
-    ctx.arc x, y, r/scale-factor, 0, tau
+    ctx.arc x + @offset.0, y + @offset.1, r/scale-factor, 0, tau
     ctx.close-path!
     ctx.fill!
     ctx.global-alpha = 1
@@ -52,8 +56,8 @@ export class Backdrop
     offset = @scroll % bgh
 
     ctx.ctx.global-alpha = 1
-    ctx.ctx.draw-image bg, 0, offset,       screen-size.0, bgh
-    ctx.ctx.draw-image bg, 0, offset - bgh, screen-size.0, bgh
+    ctx.ctx.draw-image bg, 0 + @offset.0, offset + @offset.1,       screen-size.0, bgh
+    ctx.ctx.draw-image bg, 0 + @offset.0, offset + @offset.1 - bgh, screen-size.0, bgh
     ctx.ctx.global-alpha = 1
 
     for star in @stars

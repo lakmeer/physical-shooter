@@ -165,13 +165,20 @@ export class Laser
     @w = 100
     @pos = [ pos.0, pos.1 ]
     @collider = new LaserCollider pos.0, pos.1, @w
-    @charge-time = 0.5
+    @charge-time = Laser.charge-time
     @phase = 1
     @state =
       alive: yes
       age: 0
       life: 2
       power: 200
+
+  strength: ->
+    if @phase isnt 2 then 0
+    else 1 - @state.age / @state.life
+
+  done-charging: ->
+    @phase is 2
 
   impact: (target, Δt) ->  # Assume target has compatible component
     damage-this-tick = @state.power * Δt
@@ -227,4 +234,6 @@ export class Laser
     @draw-beam it, @w * (1 -  p*p ), \grey
     @draw-beam it, @w * (1 -   p  ), \white
     it.ctx.global-composite-operation = \source-over
+
+  @charge-time = 0.5
 

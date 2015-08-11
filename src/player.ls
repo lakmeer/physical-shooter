@@ -139,12 +139,10 @@ export class Player
       ctx.stroke-circle @physics.pos, diam
     ctx.ctx.global-alpha = 1
 
-  laser: (shaker) ->
+  laser: ->
     if not @alive then return
     @lasers.push new Laser this, [ @physics.pos.0, @physics.pos.1 ]
     @laser-timer.active = yes
-    if shaker?
-      shaker.trigger-after 0.5, 10, 2.5
     return true
 
   collect: (item) ->
@@ -161,10 +159,14 @@ export class Player
     @bullet-timer.update Δt
 
     # Update special weapons
-    @lasers  = @lasers.filter  (.update Δt, pos)
-    if @lasers.length is 0
-      @deactivate-laser!
-    @laser-timer.update Δt
+    @lasers = @lasers.filter (.update Δt, pos)
+    if @lasers.length is 0 then @deactivate-laser!
+
+    for laser in @lasers  # there's only one actually
+      if laser.done-charging!
+        @state.laser-active = yes
+        @state.laser-charging = no
+
     @forcefield-phase += Δt * 200
 
     if @bullet-timer.elapsed => @shoot!
@@ -180,6 +182,9 @@ export class Player
 
     @physics.move-to dest
     @collider.move-to dest
+
+  is-laser-busy: ->
+    @state.laser-active or @state.laser-charging
 
   is-super-active: ->
     @state.laser-active or @state.forcefield-active or @state.vortex-active
@@ -221,19 +226,21 @@ export class Player
       @bullets.push new PlayerBullet this, (multi3-right `v2.add` source), (multi3-right `v2.scale` 5)
 
   activate-laser: ->
-    if not @state.laser-active
-      @state.laser-active = yes
+    if not @is-laser-busy!
+      @state.laser-charging = yes
       @laser!
       @deactivate-vortex!
       @deactivate-forcefield!
+    else
+      log @state
 
   activate-forcefield: ->
-    if not @state.laser-active
+    if not @is-laser-busy!
       @state.forcefield-active = yes
       @deactivate-vortex!
 
   activate-vortex: ->
-    if not @state.laser-active
+    if not @is-laser-busy!
       @state.vortex-active = yes
       @deactivate-forcefield!
 

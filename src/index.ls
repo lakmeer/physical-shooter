@@ -213,12 +213,13 @@ play-test-frame = (Δt, time) ->
       if player.damage.health > 0 and other.collider.intersects player.collider
         other.impact? player, Δt
 
-    if player.state.forcefield-active and player.alive
+    if player.state.forcefield-active
       emit-force-blast repulse-force, player, enemies, Δt
-      shaker.trigger 2/player-count, 0.1
+      shaker.trigger 1, 0.1
 
     if player.state.vortex-active
       emit-beam-blast beam-attract-force, player, enemies, Δt
+      shaker.trigger 2, 0.1
 
     if player.damage.health <= 0 and player.alive
       player.kill!
@@ -227,6 +228,8 @@ play-test-frame = (Δt, time) ->
           enemy.fire-target = null
 
     for laser in player.lasers
+      shaker.trigger 10 * laser.strength!, 0.1
+
       for enemy in enemies
         if laser.collider.intersects enemy.collider
           laser.impact enemy, Δt
@@ -250,6 +253,7 @@ play-test-frame = (Δt, time) ->
 render-frame = (frame) ->
   main-canvas.clear!
   main-canvas.set-offset shaker.get-offset!
+  backdrop.set-offset shaker.get-offset!
   backdrop.draw main-canvas
   effects.draw main-canvas
   effects-b.draw main-canvas
@@ -389,10 +393,11 @@ document.add-event-listener \keydown, ({ which }:event) ->
   return false
 
 
-for let i from 0 to 5
-  delay 600 * i, ->
-    player = add-local-player i
-    player.move-towards [ board-size.0 * 0.09 * (-2.5 + i), 0.8 * -board-size.1 ]
+if window.location.hash is \#debug
+  for let i from 0 to 5
+    delay 600 * i, ->
+      player = add-local-player i
+      player.move-towards [ board-size.0 * 0.09 * (-2.5 + i), 0.8 * -board-size.1 ]
 
 
 
