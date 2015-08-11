@@ -29,13 +29,22 @@ function errorReporter (err){
 
 // Preconfigure bundler
 
-var bundler = browserify({
+var master = browserify({
   debug: true,
   cache: {},
   packageCache: {},
   entries: [ './src/index.ls' ],
   extensions: '.ls'
 });
+
+var client = browserify({
+  debug: true,
+  cache: {},
+  packageCache: {},
+  entries: [ './src/client.ls' ],
+  extensions: '.ls'
+});
+
 
 
 // Tasks
@@ -47,19 +56,28 @@ gulp.task('server', function () {
   });
 });
 
-gulp.task('browserify', function () {
-  return bundler
+gulp.task('master', function () {
+  return master
     .bundle()
     .on('error', errorReporter)
     .pipe(source('app.js'))
     .pipe(gulp.dest('public'))
 });
 
+gulp.task('client', function () {
+  return client
+    .bundle()
+    .on('error', errorReporter)
+    .pipe(source('client.js'))
+    .pipe(gulp.dest('public'))
+});
+
 
 // Register
 
-gulp.task('default', [ 'server', 'browserify' ], function () {
-  gulp.watch(['src/**/*.ls','test/**/*.ls'], [ 'browserify' ]);
+gulp.task('default', [ 'server', 'master', 'client' ], function () {
+  gulp.watch(['src/**/*.ls', 'test/**/*.ls'], [ 'master' ]);
+  gulp.watch(['src/client.ls'], [ 'client' ]);
   gulp.watch(['public/**/*']).on('change', reload);
 });
 

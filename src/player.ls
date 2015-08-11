@@ -35,6 +35,7 @@ export class Player
 
   { board-size } = require \config
 
+  max-speed     = 10000
   laser-rate    = 2
   bullet-rate   = 0.2
   sprite-size   = [ 30, 30 ]
@@ -55,13 +56,14 @@ export class Player
     @damage =
       health: 1000
       max-hp: 1000
-
+    @alive = yes
     @forcefield-phase = 0
     @forcefield-active = no
     @laser-timer  = new Timer laser-rate
     @bullet-timer = new RecurringTimer bullet-rate
     @palette = Palette[palette-index-assignment[@index]]
     @sprite = palette-sprite color-map, lumin-map, @palette.paintjob, 200
+    @destination-pos = [ @physics.pos.0, @physics.pos.1 ]
 
     @set-weapon-level 0
 
@@ -75,25 +77,18 @@ export class Player
     @bullet-timer.target = 1/spec.dps * 10 * spec.num
 
   kill: ->
-    @dead = true
+    @alive = false
     @bullets = []
 
   unkill: ->
-    @dead = false
+    @alive = true
     @damage.health = @damage.max-hp
 
   derive-bullet-color: (p) ->
     @palette.bullet-color p
 
-  auto-pilot: (time) ->
-    m = Math.sin time + @index * pi / 3
-    g = Math.cos time + @index * pi / 6
-    @physics.pos.0 = board-size.0 * 0.98 * m # * Math.abs(m)
-    @physics.pos.1 = -board-size.1 + board-size.1/3 + g * board-size.1/5
-
-  move-to: (pos) ->
-    @physics.move-to pos
-    @collider.move-to pos
+  move-towards: (pos) ->
+    @destination-pos = pos
 
   draw-projectiles: (ctx) ->
     @bullets.map (.draw ctx)
@@ -102,12 +97,12 @@ export class Player
     @lasers.map (.draw ctx)
 
   draw-ship: (ctx) ->
-    if @dead then return
+    if not @alive then return
     @draw-forcefield ctx if @forcefield-active
     ctx.sprite @sprite, @physics.pos, sprite-size, offset: sprite-offset
 
   draw: (ctx) ->
-    if @dead then return
+    if not @alive then return
     @draw-projectiles ctx
     @draw-lasers ctx
     @draw-ship ctx
@@ -124,7 +119,7 @@ export class Player
     ctx.ctx.global-alpha = 1
 
   laser: (shaker) ->
-    if @dead then return
+    if not @alive then return
     if @laser-timer.active is no
       @lasers.push new Laser this, [ @physics.pos.0, @physics.pos.1 ]
       @laser-timer.active = yes
@@ -133,31 +128,39 @@ export class Player
       return true
     return false
 
-  dont-auto-move: ->
-    @auto-move = no
-
   collect: (item) ->
     item.collected = yes
     @score += 1
 
   update: (Δt, time) ->
-    if @dead then return
-    if @auto-move then @auto-pilot time
+    if not @alive then return
 
     pos = @physics.pos
 
     @forcefield-phase += Δt * 40
+
     @bullets = @bullets.filter (.update Δt)
     @lasers  = @lasers.filter  (.update Δt, pos)
 
     @laser-timer.update Δt
     @bullet-timer.update Δt
-    @collider.move-to @physics.pos
 
     if @bullet-timer.elapsed => @shoot!
 
+    # Move towards dest
+    diff = @destination-pos `v2.sub` @physics.pos
+    dist = v2.hyp diff
+    dest =
+      if dist < max-speed * Δt
+        @destination-pos
+      else
+        @physics.pos `v2.add` ((v2.norm diff) `v2.scale` (max-speed * Δt))
+
+    @physics.move-to dest
+    @collider.move-to dest
+
   shoot: ->
-    if @dead then return
+    if not @alive then return
     if @laser-is-active then return
 
     jiggle = [ (random-range -1, 1), (random-range -1, 1) ]
@@ -191,4 +194,13 @@ export class Player
       @bullets.push new PlayerBullet this, (multi3-mid   `v2.add` source)
       @bullets.push new PlayerBullet this, (multi3-right `v2.add` source), (multi3-right `v2.scale` 2)
       @bullets.push new PlayerBullet this, (multi3-right `v2.add` source), (multi3-right `v2.scale` 5)
+
+  activate-laser: ->
+  activate-forcefield: ->
+  activate-beam-vortex: ->
+
+  deactivate-laser: ->
+  deactivate-forcefield: ->
+  deactivate-beam-vortex: ->
+
 

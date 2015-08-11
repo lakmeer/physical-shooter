@@ -5,8 +5,6 @@ export class ScreenShake
 
   { scale-factor } = require \config
 
-  log scale-factor
-
   shake = ->
     (0.5 - rnd 1) * 2 * rnd it
 

@@ -1,7 +1,7 @@
 
 # Require
 
-{ id, log, min, v2, rnd, floor, delay, wrap, limit } = require \std
+{ id, log, min, v2, rnd, pi, floor, delay, wrap, limit } = require \std
 
 { FrameDriver } = require \./frame-driver
 { Blitter }     = require \./blitter
@@ -32,7 +32,7 @@ beam-attract-force = -100000
 repulse-force      = 10000
 start-wave-size    = 10
 effects-limit      = 50
-player-count       = 1
+player-count       = 6
 
 shaker           = new ScreenShake
 effects          = new EffectsDriver effects-limit
@@ -42,7 +42,8 @@ enemy-bin-space  = new BinSpace 40, 20, \white
 player-bin-space = new BinSpace 40, 20, \black
 crowd-bin-space  = new BinSpace 40, 20, \red
 
-players = [ new Player i + 0 for i from 0 til player-count ]
+pilots  = []
+players = []
 enemies = []
 pickups = []
 
@@ -109,19 +110,17 @@ new-wave = (n) ->
 
   for i from 0 til small
     enemy = new Enemy [ x, y ]
-    enemy.fire-target = players.0
+      #enemy.fire-target = players.0
     enemies.push enemy
 
   for i from 0 til big
     enemy = new BigEnemy [ x,y ]
-    enemy.fire-target = players.0
+      #enemy.fire-target = players.0
     enemies.push enemy
 
 find-target = (enemy) ->
-  if player-count is 0
-    enemy.fire-target = null
-  else if not players.0.dead
-    enemy.fire-target = players.0
+  # TODO: this
+  enemy.fire-target = null
 
 check-destroyed = (enemy, owner, Δt) ->
   if enemy.damage.health <= 0 and enemy.damage.alive
@@ -170,6 +169,12 @@ play-test-frame = (Δt, time) ->
   crowd-bin-space.clear!
   player-bin-space.clear!
 
+  # Populate player bullet bin space
+  for player in players
+    player.update Δt, time
+    for bullet in player.bullets
+      enemy-bin-space.assign-bin bullet
+
   # Spawn new enemies if we've run out
   if enemies.length < 1
     wave-complete-timer.begin!
@@ -178,13 +183,6 @@ play-test-frame = (Δt, time) ->
     #log wave-complete-timer.get-progress!
     if wave-complete-timer.elapsed
       new-wave wave-size
-
-  # Update players and their bullets
-  for player in players
-    #player.dont-auto-move!
-    player.update Δt, time
-    for bullet in player.bullets
-      enemy-bin-space.assign-bin bullet
 
   # Update enemies and their bullets
   for enemy in enemies
@@ -208,25 +206,26 @@ play-test-frame = (Δt, time) ->
           other.impact enemy, Δt
           check-destroyed enemy, other.owner, Δt
 
-  # Check for collisions on the black plane
-  for player in players
+  # Update players and their bullets
+  players := players.filter (player) ->
+
+    # Check for collisions on the black plane
     for other in player-bin-space.get-bin-collisions player
       if player.damage.health > 0 and other.collider.intersects player.collider
         other.impact? player, Δt
 
-    if player.forcefield-active and not player.dead
+    if player.forcefield-active and player.alive
       emit-force-blast repulse-force, player, enemies, Δt
       shaker.trigger 2/player-count, 0.1
 
     if player.beam-vortex-active
       emit-beam-blast beam-attract-force, player, enemies, Δt
-      #shaker.trigger 2/player-count, 0.1
 
-    if player.damage.health <= 0 and not player.dead
-      effects.push new Explosion player.physics.pos, 3, player.explosion-tint-color
+    if player.damage.health <= 0 and player.alive
       player.kill!
       for enemy in enemies
-        enemy.fire-target = null
+        if enemy.fire-target is player
+          enemy.fire-target = null
 
     for laser in player.lasers
       for enemy in enemies
@@ -235,8 +234,190 @@ play-test-frame = (Δt, time) ->
           enemy.last-hit = player
           check-destroyed enemy, player, Δt
 
+    if not player.alive
+      effects.push new Explosion player.physics.pos, 3
+      shaker.trigger 10, 1
+      return false
+
+    return true
+
 
   enemies := enemies.filter (.damage.alive)
+
+
+# Standard renderer
+
+render-frame = (frame) ->
+  main-canvas.clear!
+  main-canvas.set-offset shaker.get-offset!
+  backdrop.draw main-canvas
+  effects.draw main-canvas
+  effects-b.draw main-canvas
+
+  #enemy-bin-space.draw main-canvas
+  #player-bin-space.draw main-canvas
+  #crowd-bin-space.draw main-canvas
+
+  pickups.map (.draw main-canvas)
+  enemies.map (.draw main-canvas)
+
+  # This order is important
+  players.map (.draw-projectiles main-canvas)
+  players.map (.draw-lasers main-canvas)
+  players.map (.draw-ship main-canvas)
+
+
+# Listen
+
+ENTER = 13
+KEY_Z = 90
+KEY_X = 88
+KEY_C = 67
+SPACE = 32
+ESCAPE = 27
+
+my-player-index = 0
+
+
+# Multiplayer
+
+class Pilot
+  (@player) ->
+    log "new Pilot for: ", @player
+    @bind-inputs!
+
+  bind-inputs: ->
+  kill-player: -> @player.kill!
+
+  auto-pilot: (time, i = @player.index) ->
+    m = Math.sin time + i * pi / 3
+    g = Math.cos time + i * pi / 6
+    @player.move-towards [ board-size.0 * 0.98 * m, -board-size.1 + board-size.1/3 + g * board-size.1/5 ]
+
+
+class AutomatedPilot extends Pilot
+
+  ->
+    super ...
+
+  receive-update-data: (x, y, command, time) ->
+    @auto-pilot time
+    return
+
+
+class LocalPilot extends Pilot
+  ->
+    super ...
+
+  bind-inputs: ->
+
+    player = @player
+
+    document.add-event-listener \keydown, ({ which }:event) ->
+      switch which
+      | SPACE  => player.activate-forcefield!
+      | KEY_Z  => player.activate-laser!
+      | KEY_X  => player.level-up-weapon!
+      | KEY_C  => player.activate-beam-vortex!
+      | _  => return event
+      event.prevent-default!
+      return false
+
+    document.add-event-listener \keyup, ({ which }:event) ->
+      switch which
+      | SPACE  => player.deactivate-forcefield!
+      | KEY_Z  => player.deactivate-laser!
+      | KEY_C  => player.deactivate-beam-vortex!
+      | _  => return event
+      event.prevent-default!
+      return false
+
+    main-canvas.canvas.add-event-listener \mousemove, ({ pageX, pageY }) ->
+      mouse  = [ pageX, pageY ]
+      dest   = main-canvas.screen-space-to-game-space mouse
+      player.move-towards dest
+
+
+class WebsocketPilot extends Pilot
+  ->
+    super ...
+
+  receive-update-data: (x, y, command, time) ->
+    @player.move-towards [
+      -board-size.0 + board-size.0 * 2 * x
+      board-size.1 - board-size.1 * 2 * y
+    ]
+
+
+class WebsocketConnection
+  ->
+
+
+autopilot-time = 0
+last-time = Date.now!
+
+
+# Server callbacks
+
+on-player-joined = (index) ->
+  pilots[index] = new WebsocketPilot new Player index
+  players.push pilots[index].player
+
+on-player-disconnected = (index) ->
+  log "Player lost", index
+  pilots[index].kill-player!
+  delete pilots[index]
+
+on-player-update = (index, ...data) ->
+  autopilot-time := last-time - Date.now!/1000
+  pilots[index]?.receive-update-data ...data, autopilot-time
+
+
+# Init - make connection to player relay server
+
+IO = require \socket.io-client
+
+player-server = IO \localhost:9999
+
+player-server.on \connect, ->
+  player-server.emit \is-master
+
+player-server.on \pj, on-player-joined
+player-server.on \pd, on-player-disconnected
+player-server.on \p,  on-player-update
+
+
+
+# Debug Controls
+
+document.add-event-listener \keydown, ({ which }:event) ->
+  switch which
+  | ESCAPE => frame-driver.toggle!
+  | ENTER  =>
+    for i from 0 to 6
+      if not pilots[i]
+        pilots[i] = new LocalPilot new Player i
+        players.push pilots[i].player
+        event.prevent-default!
+        return false
+
+  | _  => return event
+  event.prevent-default!
+  return false
+
+
+
+
+
+
+
+
+
+#
+# DEBUG TICK FUNCTIONS
+#
+# Non-game tick functions for testing engine features
+#
 
 
 # Test explosion particles
@@ -298,7 +479,7 @@ crowding-test-frame = (Δt, time) ->
 
   # Check for collisions on the black plane
   for player in players
-    if player.forcefield-active and not player.dead
+    if player.forcefield-active and alive player
       emit-force-blast repulse-force, player, enemies, Δt
       shaker.trigger 10/player-count, 0.1
 
@@ -329,69 +510,13 @@ weapons-test-frame = (Δt) ->
   for player, i in players
     player.dont-auto-move!
     player.update Δt * time-factor
-    player.move-to [ -board-size.0/3 * 2.5 + board-size.0/3 * i, -board-size.1*0.85 ]
+    player.move-towards [ -board-size.0/3 * 2.5 + board-size.0/3 * i, -board-size.1*0.85 ]
 
 
-# Standard renderer
+#
+# END DEBUG TICK FUNCTIONS
+#
 
-render-frame = (frame) ->
-  main-canvas.clear!
-  main-canvas.set-offset shaker.get-offset!
-  backdrop.draw main-canvas
-  effects.draw main-canvas
-  effects-b.draw main-canvas
-
-  #enemy-bin-space.draw main-canvas
-  #player-bin-space.draw main-canvas
-  #crowd-bin-space.draw main-canvas
-
-  pickups.map (.draw main-canvas)
-  enemies.map (.draw main-canvas)
-
-  # This order is important
-  players.map (.draw-projectiles main-canvas)
-  players.map (.draw-lasers main-canvas)
-  players.map (.draw-ship main-canvas)
-
-
-# Listen
-
-ENTER = 13
-KEY_Z = 90
-KEY_X = 88
-KEY_C = 67
-SPACE = 32
-ESCAPE = 27
-
-my-player-index = 0
-
-document.add-event-listener \keydown, ({ which }:event) ->
-  switch which
-  | ESCAPE => frame-driver.toggle!
-  | ENTER  => players.map (.unkill!)
-  | SPACE  => players[my-player-index].forcefield-active = yes
-  | KEY_Z  => players[my-player-index].laser shaker
-  #| KEY_Z  => players.map (.laser shaker)
-  | KEY_X  => players[my-player-index].level-up-weapon!
-  | KEY_C  => players[my-player-index].beam-vortex-active = yes
-  | _  => return event
-  event.prevent-default!
-  return false
-
-document.add-event-listener \keyup, ({ which }:event) ->
-  switch which
-  | SPACE  => players[my-player-index].forcefield-active = no
-  | KEY_C  => players[my-player-index].beam-vortex-active = no
-  | _  => return event
-  event.prevent-default!
-  return false
-
-main-canvas.canvas.add-event-listener \mousemove, ({ pageX, pageY }) ->
-  player = players[my-player-index]
-  mouse  = [ pageX, pageY ]
-  dest   = main-canvas.screen-space-to-game-space mouse
-  player.move-to dest
-  player.dont-auto-move!
 
 
 # Init - default play-test-frame

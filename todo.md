@@ -18,4 +18,7 @@
 - Stop restricting enemies to the screen box
 - Enemies attempt to move back towards the pod
 - Allow players to drop in and out
+- Go back to impact-based bullet damage
+- Move to proper damage module
+- Enemy target selection
 
