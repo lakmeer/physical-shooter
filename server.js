@@ -27,7 +27,9 @@ var Player = function (index) {
 var master = { emit: id }
 
 var players = [];
+var clientIds = {};
 for (var i = 0; i < 6; i++) { players.push(Player(i)); }
+
 
 // Servers
 //var server = http.createServer().listen(config.port);
@@ -91,18 +93,14 @@ function becomeMaster () {
   master = this;
 
   // Wipe auth table
-  allPlayers = {};
+  clientIds = {};
 };
 
 function becomePlayer () {
   sendAvailablePlayers.apply(this);
-
-  allPlayers[this.id] = true;
-
+  clientIds[this.id] = true;
 }
 
-
-var allPlayers = {};
 
 
 // Socket callbacks
@@ -133,7 +131,7 @@ io.on('connection', function (socket) {
   });
 
   socket.on('p', function playerUpdate (x, y, command) {
-    if (allPlayers[socket.id]) {
+    if (clientIds[socket.id]) {
       master.emit('p', myPlayerIndex, x, y, command);
       players[myPlayerIndex].lastSeen = Date.now();
     } else {
@@ -144,15 +142,15 @@ io.on('connection', function (socket) {
   socket.on('disconnect', function () {
     log('Player lost:', myPlayerIndex);
 
-    log(socket.id, allPlayers);
+    log(socket.id, clientIds);
 
-    // If this socket isn't in the allPlayers list, it doesn't have the right
+    // If this socket isn't in the clientIds list, it doesn't have the right
     // to deallocate that player
 
-    if (allPlayers[socket.id]) {
+    if (clientIds[socket.id]) {
       master.emit('pd', myPlayerIndex);
       freePlayer(myPlayerIndex);
-      delete allPlayers[socket.id];
+      delete clientIds[socket.id];
     } else {
       socket.emit('reconnect');
     }

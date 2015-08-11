@@ -41,7 +41,7 @@ var client = browserify({
   debug: true,
   cache: {},
   packageCache: {},
-  entries: [ './src/client.ls' ],
+  entries: [ './src/client/index.ls' ],
   extensions: '.ls'
 });
 
@@ -76,8 +76,8 @@ gulp.task('client', function () {
 // Register
 
 gulp.task('default', [ 'server', 'master', 'client' ], function () {
-  gulp.watch(['src/**/*.ls', 'test/**/*.ls'], [ 'master' ]);
-  gulp.watch(['src/client.ls'], [ 'client' ]);
+  gulp.watch(['src/**/*.ls', '!src/client/*.ls', 'test/**/*.ls'], [ 'master' ]);
+  gulp.watch(['src/client/*.ls'], [ 'client' ]);
   gulp.watch(['public/**/*']).on('change', reload);
 });
 

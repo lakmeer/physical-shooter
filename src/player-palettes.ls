@@ -54,7 +54,7 @@ export grey =
   stray-color: \white
   laser-color: -> rgb(1, 1, 1)
   bullet-color: -> \#ddd
-  paintjob: <[ grey grey grey ]>
+  paintjob: <[ lightgrey lightgrey lightgrey ]>
   vortex-particle-color: \black
 
 

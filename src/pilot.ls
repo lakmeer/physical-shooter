@@ -13,7 +13,6 @@
 
 export class Pilot
   (@player) ->
-    log "new Pilot for: ", @player
     @bind-inputs!
 
   bind-inputs: ->

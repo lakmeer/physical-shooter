@@ -13,10 +13,14 @@
 { Enemy, BigEnemy }   = require \./enemy
 { CollectableStream } = require \./collectable-stream
 
-{ EffectsDriver } = require \./effects-driver
-{ ScreenShake }   = require \./screen-shake
-{ Explosion }     = require \./explosion
-{ Wreckage }      = require \./wreckage
+{ EffectsDriver }     = require \./effects-driver
+{ ScreenShake }       = require \./screen-shake
+{ Explosion }         = require \./explosion
+{ Wreckage }          = require \./wreckage
+{ EnemySpawnEffect }  = require \./enemy-spawn-effect
+{ PlayerSpawnEffect } = require \./player-spawn-effect
+
+{ LocalPilot, AutomatedPilot, WebsocketPilot } = require \./pilot
 
 
 # Config
@@ -53,7 +57,7 @@ wave-size = do (n = start-wave-size, x = 0) ->*
   while true
     yield [ n += 1, floor x += 0.2 ]
 
-wave-complete-timer = new OneShotTimer 3
+wave-complete-timer = new OneShotTimer 0
 
 
 # Homeless functions
@@ -107,14 +111,13 @@ new-wave = (n) ->
   x = -board-size.0 + 10 + (rnd board-size.0 * 2 - 10)
   y = board-size.1 - rnd (board-size.1/2 - 10)
 
+  effects.push new EnemySpawnEffect x, y
+
   for i from 0 til small
-    enemy = new Enemy [ x, y ]
-    enemies.push enemy
+    enemies.push new Enemy [ x, y ]
 
   for i from 0 til big
-    enemy = new BigEnemy [ x,y ]
-      #enemy.fire-target = players.0
-    enemies.push enemy
+    enemies.push new BigEnemy [ x,y ]
 
 
 check-destroyed = (enemy, owner, Δt) ->
@@ -286,57 +289,8 @@ my-player-index = 0
 
 # Multiplayer
 
-{ LocalPilot, AutomatedPilot, WebsocketPilot } = require \./pilot
-
 autopilot-time = 0
 last-time = Date.now!
-
-
-class PlayerSpawn
-  (@player, @done) ->
-    @timer = new Timer 0.2
-    @timer.start!
-    @flash = 1
-
-  update: (Δt, time) ->
-    @timer.update Δt
-    if @timer.elapsed => @done!
-    return @timer.active
-
-  draw: (ctx) ->
-    @flash = 1 - @flash
-    p = @timer.get-progress!
-    t = 1 - p
-    tt = t*t
-    ttt = t*t*t
-    pp = 1 - tt
-    ppp = 1 - ttt
-
-    # Color overlay
-    ctx.ctx.global-composite-operation = \hue
-    ctx.set-color @player.palette.bullet-color 0
-    ctx.rect [ -board-size.0, board-size.1  ], [ board-size.0 * 2, board-size.1 * 2 ]
-
-    # Flashing
-    ctx.ctx.global-composite-operation = \source-over # overlay
-    ctx.ctx.global-alpha = @flash
-
-    # Cross Formation
-    offset-top  = pp * board-size.1
-    offset-left = pp * board-size.0
-    ctx.rect [ -board-size.0, board-size.1 - offset-top  ], [ board-size.0 * 2, board-size.1 * 2*tt ]
-    ctx.rect [ -board-size.0 + offset-left, board-size.1 ], [ board-size.0 * 2*tt, board-size.1 * 2 ]
-
-    ctx.set-color \white
-    offset-top  = ppp * board-size.1
-    offset-left = ppp * board-size.0
-    ctx.rect [ -board-size.0, board-size.1 - offset-top  ], [ board-size.0 * 2, board-size.1 * 2*ttt ]
-    ctx.rect [ -board-size.0 + offset-left, board-size.1 ], [ board-size.0 * 2*ttt, board-size.1 * 2 ]
-
-
-    # Restore context
-    ctx.ctx.global-composite-operation = \source-over
-    ctx.ctx.global-alpha = 1
 
 
 # Server callbacks
@@ -347,10 +301,9 @@ on-connect = ->
 on-player-joined = (index) ->
   new-player = new Player index
   pilots[index] = new WebsocketPilot new-player
-  effects.push new PlayerSpawn new-player, -> players.push new-player
+  effects.push new PlayerSpawnEffect new-player, -> players.push new-player
 
 on-player-disconnected = (index) ->
-  log "Player lost", index
   pilots[index].kill-player!
   delete pilots[index]
 
@@ -375,7 +328,7 @@ player-server.on \p,  on-player-update
 add-local-player = (n) ->
   new-player = new Player n
   pilots[n] = new LocalPilot new-player
-  effects.push new PlayerSpawn new-player, -> players.push new-player
+  effects.push new PlayerSpawnEffect new-player, -> players.push new-player
   return new-player
 
 
@@ -395,10 +348,15 @@ document.add-event-listener \keydown, ({ which }:event) ->
 
 if window.location.hash is \#debug
   for let i from 0 to 5
-    delay 600 * i, ->
+    delay 200 * i, ->
       player = add-local-player i
-      player.move-towards [ board-size.0 * 0.09 * (-2.5 + i), 0.8 * -board-size.1 ]
-
+      player.move-towards [ board-size.0 * 0.06 * (-2.5 - 13 + i), 0.8 * -board-size.1 ]
+      player.activate-vortex!
+  for let i from 0 to 5
+    delay 1400 + 200 * i, ->
+      player = add-local-player i
+      player.move-towards [ board-size.0 * 0.06 * (-2.5 - 0 + i), 0.8 * -board-size.1 ]
+      player.activate-vortex!
 
 
 

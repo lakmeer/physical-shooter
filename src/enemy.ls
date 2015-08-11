@@ -63,6 +63,10 @@ export class Enemy
     @confine-to-bounds!
     @collider.move-to @physics.pos
 
+    # Check if target died and we're just remembering it's dead object
+    if not @fire-target?.alive
+      @fire-target = null
+
   assign-target: (target) ->
     @fire-target = target
 
@@ -105,7 +109,7 @@ export class BigEnemy extends Enemy
   aspect = 71 / 100
   fire-rate = 0.05
   sprite-size = [ 50, 50 * aspect ]
-  bullet-speed = 400
+  bullet-speed = 350
   sprite-offset = sprite-size `v2.scale` 0.5
 
   (pos = [0 0]) ->
