@@ -43,6 +43,9 @@ export class Player
 
   palette-index-assignment = <[ red blue green magenta cyan yellow ]>
 
+  vortex-particle-width = 5
+  vortex-particle-count = 10
+
   shells = 5
   shell-gap = 30
 
@@ -60,7 +63,7 @@ export class Player
       health: 1000
       max-hp: 1000
     @alive = yes
-
+    @w = 20
     @laser-timer  = new Timer laser-rate
     @bullet-timer = new RecurringTimer bullet-rate
     @palette = Palette[palette-index-assignment[@index]]
@@ -96,7 +99,8 @@ export class Player
     @palette.bullet-color p
 
   move-towards: (pos) ->
-    @destination-pos = pos
+    if not (@state.vortex-active or @state.laser-active)
+      @destination-pos = pos
 
   draw-projectiles: (ctx) ->
     @bullets.map (.draw ctx)
@@ -105,19 +109,24 @@ export class Player
     @lasers.map (.draw ctx)
 
   draw-ship: (ctx) ->
-    if not @alive then return
-    if @state.forcefield-active
-      @draw-forcefield ctx
     ctx.sprite @sprite, @physics.pos, sprite-size, offset: sprite-offset
 
-  draw: (ctx) ->
-    if not @alive then return
-    @draw-projectiles ctx
-    @draw-lasers ctx
-    @draw-ship ctx
+  draw-vortex: (ctx) ->
+    ctx.ctx.global-composite-operation = \overlay
+    ctx.set-color @palette.vortex-particle-color
+    for i from 0 to vortex-particle-count
+      left = @physics.pos.0 + random-range -@w/2 - vortex-particle-width, @w/2
+      top  = @physics.pos.1 + board-size.1 * 2 - random-range 0, @w/2
+      ctx.rect [ left, top ], [ vortex-particle-width, board-size.1 * 2 ]
+    ctx.ctx.global-composite-operation = \source-over
+
+  draw-special-effects: (ctx) ->
+    if @state.forcefield-active then @draw-forcefield ctx
+    if @state.vortex-active then @draw-vortex ctx
 
   draw-forcefield: (ctx) ->
     max-diam = 10 + shells * shell-gap
+    ctx.set-color \white
     ctx.set-line-color \white
 
     diam = 50
@@ -172,9 +181,12 @@ export class Player
     @physics.move-to dest
     @collider.move-to dest
 
+  is-super-active: ->
+    @state.laser-active or @state.forcefield-active or @state.vortex-active
+
   shoot: ->
     if not @alive then return
-    if @state.laser-active or @state.forcefield-active or @state.vortex-active then return
+    if @is-super-active! then return
 
     jiggle = [ (random-range -1, 1), (random-range -1, 1) ]
     source = @physics.pos `v2.add` jiggle

@@ -263,6 +263,7 @@ render-frame = (frame) ->
 
   # This order is important
   players.map (.draw-projectiles main-canvas)
+  players.map (.draw-special-effects main-canvas)
   players.map (.draw-lasers main-canvas)
   players.map (.draw-ship main-canvas)
 
@@ -367,25 +368,31 @@ player-server.on \p,  on-player-update
 
 # Debug Controls
 
+add-local-player = (n) ->
+  new-player = new Player n
+  pilots[n] = new LocalPilot new-player
+  effects.push new PlayerSpawn new-player, -> players.push new-player
+  return new-player
+
+
 document.add-event-listener \keydown, ({ which }:event) ->
   switch which
   | ESCAPE => frame-driver.toggle!
   | ENTER  =>
-    for i from 0 to 6
-      if not pilots[i]
-        new-player = new Player i
-        pilots[i] = new LocalPilot new-player
-        effects.push new PlayerSpawn new-player, -> players.push new-player
-        event.prevent-default!
-        return false
-
+      for i from 0 to 6
+        if not pilots[i]
+          add-local-player i
+          event.prevent-default!
+          return false
   | _  => return event
   event.prevent-default!
   return false
 
 
-
-
+for let i from 0 to 5
+  delay 600 * i, ->
+    player = add-local-player i
+    player.move-towards [ board-size.0 * 0.09 * (-2.5 + i), 0.8 * -board-size.1 ]
 
 
 
