@@ -51,6 +51,9 @@ players = []
 enemies = []
 pickups = []
 
+
+pod-center = [0 0]
+
 main-canvas.install document.body
 
 wave-size = do (n = start-wave-size, x = 0) ->*
@@ -113,11 +116,17 @@ new-wave = (n) ->
 
   effects.push new EnemySpawnEffect x, y
 
+  pod-center := [ x, y ]
+
   for i from 0 til small
-    enemies.push new Enemy [ x, y ]
+    enemy = new Enemy [ x, y ]
+    enemy.set-move-target pod-center
+    enemies.push enemy
 
   for i from 0 til big
-    enemies.push new BigEnemy [ x,y ]
+    enemy = new BigEnemy [ x, y ]
+    enemy.set-move-target pod-center
+    enemies.push enemy
 
 
 check-destroyed = (enemy, owner, Δt) ->
@@ -132,19 +141,19 @@ check-destroyed = (enemy, owner, Δt) ->
 
 
 de-crowd = (self, others) ->
-  max-speed = 1
+  max-speed = 0.5
   effective-distance = if self.type is \large then 100 else 25
   for other in others
     diff = v2.sub other.physics.pos, self.physics.pos
     dist = v2.hyp diff
-    dir  = v2.norm diff
+    dir  =  diff `v2.scale` max-speed
     if dist < effective-distance
       x = dir.0 * max-speed * (dist/effective-distance)
       y = dir.1 * max-speed * (dist/effective-distance)
-      #self.vel.0 -= x - 0.5 + rnd 1
-      #self.vel.1 -= y - 0.5 + rnd 1
-      other.physics.vel.0 += x * 1.5 - 0.5 + rnd 1
-      other.physics.vel.1 += y * 1.0 - 0.5 + rnd 1
+      self.physics.vel.0 -= x - 0.5 + rnd 1
+      self.physics.vel.1 -= y - 0.5 + rnd 1
+      #other.physics.vel.0 += x * 1.5 - 0.5 + rnd 1
+      #other.physics.vel.1 += y * 1.0 - 0.5 + rnd 1
 
 
 # Tick functions
@@ -167,6 +176,10 @@ play-test-frame = (Δt, time) ->
   enemy-bin-space.clear!
   crowd-bin-space.clear!
   player-bin-space.clear!
+
+  # Move the pod
+  pod-center.0 = board-size.0 * 0.8 * Math.sin time*1/5
+  pod-center.1 = board-size.1 * 0.8 * Math.cos time*3/5
 
   # Populate player bullet bin space
   for player in players
@@ -260,6 +273,8 @@ render-frame = (frame) ->
   backdrop.draw main-canvas
   effects.draw main-canvas
   effects-b.draw main-canvas
+
+  main-canvas.rect pod-center, [ 20, 20 ]
 
   #enemy-bin-space.draw main-canvas
   #player-bin-space.draw main-canvas

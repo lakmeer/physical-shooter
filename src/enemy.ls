@@ -30,6 +30,7 @@ export class Enemy
   bullet-speed = 200
   sprite-size = [ 20, 20 ]
   sprite-offset = sprite-size `v2.scale` 0.5
+  move-acc = 10
 
   (pos = [0 0]) ->
     @physics = new Physics p:pos, a:[0 -50 - rnd 50], f:0.95
@@ -60,26 +61,25 @@ export class Enemy
       @fire-timer.reset!
 
     @physics.update Δt
-    @confine-to-bounds!
     @collider.move-to @physics.pos
 
     # Check if target died and we're just remembering it's dead object
     if not @fire-target?.alive
       @fire-target = null
 
+    # Move toward pod center
+    if @move-target?
+      @physics.set-acc (@move-target `v2.sub` @physics.pos) `v2.scale` move-acc
+
   assign-target: (target) ->
     @fire-target = target
+
+  set-move-target: (pos) ~>
+    @move-target = pos
 
   point-at-target: (target = @fire-target) ->
     if target
       @rotation = @physics.get-bearing-to target.physics.pos
-
-  confine-to-bounds: ->
-    bord-z = board-size.1 * 0.5
-    if @physics.pos.0 >  board-size.0 - border then @physics.pos.0 =  board-size.0 - border
-    if @physics.pos.0 < -board-size.0 + border then @physics.pos.0 = -board-size.0 + border
-    if @physics.pos.1 >  board-size.1 - border then @physics.pos.1 =  board-size.1 - border
-    if @physics.pos.1 < -board-size.1 + bord-z then @physics.pos.1 = -board-size.1 + bord-z
 
   move-to: (pos) ->
     @physics.pos <<< pos
@@ -95,6 +95,14 @@ export class Enemy
     bullet = new EnemyBullet this, @physics.pos
     bullet.physics.set-vel bearing `v2.scale` bullet-speed
     @bullets.push bullet
+
+  # Deprecated
+  confine-to-bounds: ->
+    bord-z = board-size.1 * 0.5
+    if @physics.pos.0 >  board-size.0 - border then @physics.pos.0 =  board-size.0 - border
+    if @physics.pos.0 < -board-size.0 + border then @physics.pos.0 = -board-size.0 + border
+    if @physics.pos.1 >  board-size.1 - border then @physics.pos.1 =  board-size.1 - border
+    if @physics.pos.1 < -board-size.1 + bord-z then @physics.pos.1 = -board-size.1 + bord-z
 
 
 #
