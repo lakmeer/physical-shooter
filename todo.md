@@ -1,9 +1,6 @@
 
 - Phone Interface
-  - Add icons for the interface areas
   - Debug lack of graphics on iPhone
-  - Add button states
-  - Add title state with helper text
 
 - Engine
   - Move to proper damage module
