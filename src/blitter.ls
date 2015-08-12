@@ -104,6 +104,9 @@ export class Blitter
     @line 0, @bs.1, 0, -@bs.1
     @line @bs.0, 0, -@bs.0, 0
 
+  alpha: ->
+    @ctx.global-alpha = it
+
   install: (host) ->
     host.append-child @canvas
 

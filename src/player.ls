@@ -10,23 +10,32 @@
 
 Palette = require \./player-palettes
 
+{ bullet-damage } = require \config
+
 weapon-specs =
+  * num: 1
+    dps: 100
+  * num: 1
+    dps: 150
   * num: 2
     dps: 200
   * num: 2
     dps: 300
   * num: 3
-    dps: 400
+    dps: 370
   * num: 3
+    dps: 450
+  * num: 4
+    dps: 500
+  * num: 4
     dps: 600
-  * num: 4
+  * num: 5
+    dps: 700
+  * num: 5
     dps: 1000
-  * num: 4
-    dps: 1700
-  * num: 5
-    dps: 2500
-  * num: 5
-    dps: 4000
+
+
+max-weapon-level = weapon-specs.length - 1
 
 
 #
@@ -83,7 +92,8 @@ export class Player
     @set-weapon-level 0
 
   level-up-weapon: ->
-    @set-weapon-level @weapon-level + 1
+    if @weapon-level < max-weapon-level
+      @set-weapon-level @weapon-level + 1
 
   set-weapon-level: (n) ->
     @weapon-level = n

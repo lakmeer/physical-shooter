@@ -13,4 +13,6 @@ export world-width  = 500
 
 export board-size   = [ world-width, world-width / screen-aspect ]
 
+export bullet-damage = 10
+
 export time-factor  = 1/1

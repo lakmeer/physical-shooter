@@ -56,6 +56,8 @@ class Bullet
 
 export class PlayerBullet extends Bullet
 
+  { bullet-damage } = require \config
+
   knock-back-amount =
     small: 10
     large: 1
@@ -63,17 +65,25 @@ export class PlayerBullet extends Bullet
   ->
     @w = 2
     super ...
-    @state.quota = 5
-    @state.power = 100
+    @state.power = bullet-damage
     @physics.add-vel [0 100]
     @physics.set-acc [(random-range -5, 5), 1000]
 
-  impact: (target, Δt) ->  # Assume target has compatible component
+  old-impact: (target, Δt) ->  # Assume target has compatible component
     damage-this-tick = @state.power * Δt
     target.damage.health -= damage-this-tick
     @knock-back target, knock-back-amount[target.type]
     @state.spent += damage-this-tick
     @state.hit = true
+
+  impact: (target) ->
+    target.damage.health -= @state.power
+    @knock-back target, knock-back-amount[target.type]
+    @state.hit = true
+
+  update: (Δt, time) ->
+    super ...
+    @state.alive and not @state.hit
 
   draw: ->
     length = @w * (3 + @physics.vel.1/100)
@@ -105,12 +115,16 @@ export class EnemyBullet extends Bullet
     @collection-speed = 0
 
     @state.quota = 5
-    @state.power = 100
+    @state.power = 10
 
-  impact: (target, Δt) ->  # Assume target has compatible component
+  old-impact: (target, Δt) ->  # Assume target has compatible component
     damage-this-tick = @state.power * Δt
     target.damage.health -= damage-this-tick
     @state.spent += damage-this-tick
+    @state.hit = true
+
+  impact: (target) ->
+    target.damage.health -= @state.power
     @state.hit = true
 
   claim-for-player: (player) ->
@@ -128,6 +142,10 @@ export class EnemyBullet extends Bullet
         g = 255 - 155 * p
         t = 150 * (1 - p)
         "rgb(#t, #g, #t)"
+
+  update: (Δt, time) ->
+    super ...
+    @state.alive and not @state.hit
 
   update-stray: (Δt, owner) ->
     diff = owner.physics.pos `v2.sub` @physics.pos

@@ -42,14 +42,16 @@ export class Enemy
 
     # Damage component
     @damage =
-      health: 10
-      max-hp: 10
+      health: 30
+      max-hp: 30
       alive: yes
 
     @fire-timer  = new Timer fire-rate
     #@fire-timer.current = Math.random! * fire-rate
     @fire-target = null
     @wreckage-sprite = sprite \/assets/chunk-enemy.svg, 100
+    @fire-timer.reset!
+    @fire-timer.current = random-range 0, fire-rate
 
   claim-for-player: -> # Not used
 

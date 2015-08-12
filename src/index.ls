@@ -244,9 +244,10 @@ class BulletImpact
     @life > 0
 
   draw: (ctx) ->
-    log \draw
     ctx.set-color @color
-    ctx.circle @pos, rad * @life/life
+    ctx.alpha @life/life
+    ctx.circle @pos, rad
+    ctx.alpha 1
 
 
 

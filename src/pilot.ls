@@ -63,7 +63,7 @@ export class LocalPilot extends Pilot
 
     document.add-event-listener \keydown, ({ which }:event) ->
       switch which
-      #| SPACE  => player.level-up-weapon!
+      | SPACE  => player.level-up-weapon!
       | KEY_Z  => player.activate-laser!
       | KEY_X  => player.activate-forcefield!
       | KEY_C  => player.activate-vortex!
