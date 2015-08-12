@@ -14,6 +14,7 @@ export red =
   bullet-color: -> \#E24F58 # rgb(1-it, 0, 0)
   paintjob: <[ darkred lightblue darkred ]>
   vortex-particle-color: \#600
+  ui-color: \red
 
 export blue =
   stray-color: \blue
@@ -21,6 +22,7 @@ export blue =
   bullet-color: -> \#4296dB # rgb(0, 0, 1-it)
   paintjob: <[ darkblue lightblue royalblue ]>
   vortex-particle-color: \#005
+  ui-color: \blue
 
 export green =
   stray-color: \forestgreen
@@ -28,6 +30,7 @@ export green =
   bullet-color: -> \#00A361 #rgb(0, 0.9*(1-it), 0)
   paintjob: <[ darkgreen lightblue forestgreen ]>
   vortex-particle-color: \#050
+  ui-color: \#0f0
 
 export magenta =
   stray-color: \magenta
@@ -35,6 +38,7 @@ export magenta =
   bullet-color: -> \#c446c1 #rgb(1-it, 0, 1-it)
   paintjob: <[ purple lightblue magenta ]>
   vortex-particle-color: \#606
+  ui-color: \#f0f
 
 export cyan =
   stray-color: \cyan
@@ -42,6 +46,7 @@ export cyan =
   bullet-color: -> \#52c6cB #rgb(0, 1-it, 1-it)
   paintjob: <[ cyan lightblue skyblue ]>
   vortex-particle-color: \#055
+  ui-color: \#0ff
 
 export yellow =
   stray-color: \yellow
@@ -49,6 +54,7 @@ export yellow =
   bullet-color: -> \#F7CF50 # rgb(1-it, 1-it, 0)
   paintjob: <[ yellow lightblue gold ]>
   vortex-particle-color: \#660
+  ui-color: \#ff0
 
 export grey =
   stray-color: \white

@@ -22,6 +22,10 @@ ui     = new UI server
 # Callbacks
 
 server.on \connect, ->
+  delay 1000, ->
+    driver.start!
+    ui.start!
+    server.emit \is-client
 
 server.on \available, (colors) ->
   ui.colors-available colors
@@ -31,17 +35,5 @@ server.on \disconnect, ->
   #driver.stop!
 
 driver.on-tick (Δt, time) ->
-  ui.update Δt
-
-
-#
-# Init
-#
-
-driver.start!
-
-if window.location.hash is \#debug   # Debug - delay start so master can load first
-  delay (random-range 1000, 2000), -> server.emit \is-client
-else
-  server.emit \is-client
+  ui.update Δt, time
 
