@@ -51,6 +51,7 @@ export class LocalPilot extends Pilot
   KEY_Z = 90
   KEY_X = 88
   KEY_C = 67
+  TILDE = 192
   SPACE = 32
   ESCAPE = 27
 
@@ -64,6 +65,7 @@ export class LocalPilot extends Pilot
     document.add-event-listener \keydown, ({ which }:event) ->
       switch which
       | SPACE  => player.level-up-weapon!
+      | TILDE  => player.superpowers!
       | KEY_Z  => player.activate-laser!
       | KEY_X  => player.activate-forcefield!
       | KEY_C  => player.activate-vortex!

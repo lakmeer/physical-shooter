@@ -34,8 +34,8 @@ weapon-specs =
   * num: 5
     dps: 1000
 
-
 max-weapon-level = weapon-specs.length - 1
+
 
 
 #
@@ -65,23 +65,35 @@ export class Player
   color-map = \/assets/ship-colormap.svg
   lumin-map = \/assets/ship-luminosity.svg
 
+  laser-charge-cost   = 5000
+  repulsor-charge-cost = 1
+  vortex-charge-cost   = 2
+
+  charge-increase-per-collection = 1
+
   (@index) ->
     @bullets   = []
     @lasers    = []
+
+    @w = 20
+
     @physics   = new Physics [0 20 - board-size.1]
     @collider  = new RadialCollider 0, 0, 10
-    @auto-move = yes
-    @score     = 0
+
+    @score  = 0
+    @charge = 0
+
     @damage =
       health: 1000
       max-hp: 1000
+
     @alive = yes
-    @w = 20
+
     @laser-timer  = new Timer laser-rate
     @bullet-timer = new RecurringTimer bullet-rate
+
     @palette = Palette[palette-index-assignment[@index]]
     @sprite = palette-sprite color-map, lumin-map, @palette.paintjob, 200
-    @destination-pos = [ @physics.pos.0, @physics.pos.1 ]
 
     @state =
       laser-active: no
@@ -89,7 +101,11 @@ export class Player
       forcefield-active: no
 
     @forcefield-phase = 0
+    @destination-pos = [ @physics.pos.0, @physics.pos.1 ]
     @set-weapon-level 0
+
+  superpowers: ->
+    @charge = 1000000000
 
   level-up-weapon: ->
     if @weapon-level < max-weapon-level
@@ -153,8 +169,16 @@ export class Player
       ctx.stroke-circle @physics.pos, diam
     ctx.ctx.global-alpha = 1
 
+  draw-hud: (ctx) ->
+    charge-offset = [ 0 50 ]
+    score-offset =  [ 0 100 ]
+    ctx.set-color @palette.bullet-color 0
+    ctx.text @physics.pos, @charge, charge-offset
+    ctx.text @physics.pos, @score,  score-offset
+
   laser: ->
     if not @alive then return
+    @charge -= laser-charge-cost
     @lasers.push new Laser this, [ @physics.pos.0, @physics.pos.1 ]
     @laser-timer.active = yes
     return true
@@ -162,6 +186,7 @@ export class Player
   collect: (item) ->
     item.collected = yes
     @score += 1
+    @charge += charge-increase-per-collection
 
   update: (Δt, time) ->
     if not @alive then return
@@ -196,6 +221,17 @@ export class Player
 
     @physics.move-to dest
     @collider.move-to dest
+
+    if @state.forcefield-active
+      @charge -= repulsor-charge-cost
+
+    if @state.vortex-active
+      @charge -= vortex-charge-cost
+
+    if @charge <= 0
+      @charge = 0
+      @deactivate-vortex!
+      @deactivate-forcefield!
 
   is-laser-busy: ->
     @state.laser-active or @state.laser-charging
@@ -240,19 +276,19 @@ export class Player
       @bullets.push new PlayerBullet this, (multi3-right `v2.add` source), (multi3-right `v2.scale` 5)
 
   activate-laser: ->
-    if not @is-laser-busy!
+    if not @is-laser-busy! and @charge >= laser-charge-cost
       @state.laser-charging = yes
       @laser!
       @deactivate-vortex!
       @deactivate-forcefield!
 
   activate-forcefield: ->
-    if not @state.forcefield-active and not @is-laser-busy!
+    if not @state.forcefield-active and not @is-laser-busy! and @charge >= repulsor-charge-cost
       @state.forcefield-active = yes
       @deactivate-vortex!
 
   activate-vortex: ->
-    if not @state.vortex-active and not @is-laser-busy!
+    if not @state.vortex-active and not @is-laser-busy! and @charge >- vortex-charge-cost
       @state.vortex-active = yes
       @deactivate-forcefield!
 

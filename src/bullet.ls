@@ -34,11 +34,7 @@ class Bullet
     @state.alive = @is-in-bounds! and @state.spent <= @state.quota
 
   is-in-bounds: ->
-    @state.alive =
-      @physics.pos.0 <=  board-size.0 * 1.5 and
-      @physics.pos.0 >= -board-size.0 - 1.5 and
-      @physics.pos.1 <=  board-size.1 * 1.5 and
-      @physics.pos.1 >= -board-size.1 - 1.5
+    true
 
   knock-back: (target, n) ->
     target.physics.vel.1 += n
@@ -91,6 +87,9 @@ export class PlayerBullet extends Bullet
     it.rect [ @physics.pos.0 - @w/2, @physics.pos.1 + @w/2 ], [ @w, length ]
     it.set-color \white
     it.circle @physics.pos, @w
+
+  is-in-bounds: ->
+    @physics.pos.1 <=  board-size.1 * 1.2
 
 
 #

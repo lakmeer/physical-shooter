@@ -53,10 +53,16 @@ export class Enemy
     @fire-timer.reset!
     @fire-timer.current = random-range 0, fire-rate
 
+    @stray-limit = 50
+
   claim-for-player: -> # Not used
 
   update: (Δt, time) ->
     @bullets := @bullets.filter (.update Δt)
+
+    while @bullets.length > @stray-limit
+      @bullets.shift!
+
     @fire-timer.update Δt
     @point-at-target @fire-target
 
@@ -138,6 +144,7 @@ export class BigEnemy extends Enemy
 
     @fire-timer  = new Timer fire-rate
     @wreckage-sprite = sprite \/assets/chunk-enemy.svg, 100
+    @stray-limit = 500
 
   move-to: (pos) ->
     @physics.move-to pos

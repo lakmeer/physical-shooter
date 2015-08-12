@@ -26,6 +26,9 @@ export class Blitter
 
     @rotation = 0
 
+    @ctx.font = "20px monospace"
+    @ctx.text-align = \center
+
   clear: ->
     @ctx.fill-style = \white
     @ctx.stroke-style = \white
@@ -98,6 +101,11 @@ export class Blitter
     @ctx.arc x, y, rad, 0, tau
     @ctx.close-path!
     @ctx.stroke!
+
+  text: (pos, text, offset) ->
+    [ x, y ] = @game-space-to-screen-space pos
+    [ u, v ] = @game-size-to-screen-size offset
+    @ctx.fill-text text, x - u, y - v
 
   show-grid: ->
     @set-line-color \grey
