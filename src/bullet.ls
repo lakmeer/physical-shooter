@@ -104,14 +104,18 @@ export class EnemyBullet extends Bullet
 
     @collection-speed = 0
 
-    @state.quota = 1
-    @state.power = 25
+    @state.quota = 5
+    @state.power = 100
 
   impact: (target, Δt) ->  # Assume target has compatible component
     damage-this-tick = @state.power * Δt
     target.damage.health -= damage-this-tick
     @state.spent += damage-this-tick
     @state.hit = true
+
+  claim-for-player: (player) ->
+    @owner = player
+    @claimed = yes
 
   derive-color: ->
     if @stray
@@ -149,7 +153,10 @@ export class EnemyBullet extends Bullet
       it.circle @physics.pos, @w * 2 * 0.7
       it.ctx.global-alpha = 1
     else
-      it.set-color @derive-color!
+      if @claimed
+        it.set-color @owner.palette.bullet-color 0
+      else
+        it.set-color @derive-color!
       it.circle @physics.pos, @w
 
 

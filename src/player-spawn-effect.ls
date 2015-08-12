@@ -21,7 +21,7 @@ export class PlayerSpawnEffect
 
   update: (Δt, time) ->
     @timer.update Δt
-    if @timer.elapsed => @done!
+    if @timer.elapsed => @done @player
     return @timer.active
 
   draw: (ctx) ->

@@ -49,3 +49,6 @@ export class Physics
     yy = y - @pos.1
     asin -xx/v2.hyp [ xx, yy ]
 
+  clone-pos: ->
+    [ @pos.0, @pos.1 ]
+

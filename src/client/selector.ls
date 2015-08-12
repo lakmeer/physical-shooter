@@ -76,7 +76,7 @@ export class Selector
     else
       ship.sprite.style.display = \none
       ship.greyed.style.display = \block
-      ship.greyed.style.opacity = 0.6
+      ship.greyed.style.opacity = 0.3
 
   disconnected: ->
     # TODO: something when the client is disconnected

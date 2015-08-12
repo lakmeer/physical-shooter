@@ -49,6 +49,10 @@ export random-from = (xs) -> xs[ floor Math.random! * xs.length ]
 
 export random-range = (a, b) -> a + (rnd b - a)
 
+export ids = -> if it is 0 then 0 else 1 / it*it
+
+export idd = -> if it is 0 then 0 else 1 / it
+
 
 # Physics processors
 

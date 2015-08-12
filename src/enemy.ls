@@ -30,7 +30,7 @@ export class Enemy
   bullet-speed = 200
   sprite-size = [ 20, 20 ]
   sprite-offset = sprite-size `v2.scale` 0.5
-  move-acc = 10
+  move-acc = 5
 
   (pos = [0 0]) ->
     @physics = new Physics p:pos, a:[0 -50 - rnd 50], f:0.95
@@ -50,6 +50,8 @@ export class Enemy
     #@fire-timer.current = Math.random! * fire-rate
     @fire-target = null
     @wreckage-sprite = sprite \/assets/chunk-enemy.svg, 100
+
+  claim-for-player: -> # Not used
 
   update: (Δt, time) ->
     @bullets := @bullets.filter (.update Δt)
@@ -117,7 +119,7 @@ export class BigEnemy extends Enemy
   aspect = 71 / 100
   fire-rate = 0.05
   sprite-size = [ 50, 50 * aspect ]
-  bullet-speed = 350
+  bullet-speed = 200
   sprite-offset = sprite-size `v2.scale` 0.5
 
   (pos = [0 0]) ->
@@ -128,8 +130,8 @@ export class BigEnemy extends Enemy
 
     # Damage component
     @damage =
-      health: 100
-      max-hp: 100
+      health: 50
+      max-hp: 50
       alive: yes
 
     @fire-timer  = new Timer fire-rate

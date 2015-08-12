@@ -44,7 +44,9 @@ export class Controls
     # TODO: update buttons when touched
 
   consume-pending-input: (Δt) ->
-    [ @state.x, @state.y, @state.command ]
+    command = @state.command
+    @state.command = NO_COMMAND
+    [ @state.x, @state.y, command ]
 
   on-touchstart: (event) ~>
     for touch in event.touches

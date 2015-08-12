@@ -237,12 +237,12 @@ export class Player
       @deactivate-forcefield!
 
   activate-forcefield: ->
-    if not @is-laser-busy!
+    if not @state.forcefield-active and not @is-laser-busy!
       @state.forcefield-active = yes
       @deactivate-vortex!
 
   activate-vortex: ->
-    if not @is-laser-busy!
+    if not @state.vortex-active and not @is-laser-busy!
       @state.vortex-active = yes
       @deactivate-forcefield!
 
