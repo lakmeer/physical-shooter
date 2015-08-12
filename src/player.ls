@@ -170,6 +170,7 @@ export class Player
     ctx.ctx.global-alpha = 1
 
   draw-hud: (ctx) ->
+    return
     charge-offset = [ 0 50 ]
     score-offset =  [ 0 100 ]
     ctx.set-color @palette.bullet-color 0
@@ -233,14 +234,22 @@ export class Player
       @deactivate-vortex!
       @deactivate-forcefield!
 
+    if @auto-pilot?
+      @auto-pilot.update Δt, time
+      @damage.health = @damage.max-health
+
   is-laser-busy: ->
     @state.laser-active or @state.laser-charging
 
   is-super-active: ->
     @state.laser-active or @state.forcefield-active or @state.vortex-active
 
+  suppress-fire-if: (state) ->
+    @fire-suppress = state
+
   shoot: ->
     if not @alive then return
+    if @fire-suppress then return
     if @is-super-active! then return
 
     jiggle = [ (random-range -1, 1), (random-range -1, 1) ]

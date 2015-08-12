@@ -1,6 +1,6 @@
 
 
-{ id, log } = require \std
+{ id, log, pi } = require \std
 
 { board-size } = require \config
 
@@ -12,6 +12,9 @@
 #
 
 export class Pilot
+
+  speed = 2
+
   (@player) ->
     @bind-inputs!
 
@@ -19,9 +22,10 @@ export class Pilot
   kill-player: -> @player.kill!
 
   auto-pilot: (time, i = @player.index) ->
-    m = Math.sin time + i * pi / 3
-    g = Math.cos time + i * pi / 6
+    m = Math.sin time + i * pi/3 * speed/10
+    g = Math.cos time + i * pi/6 * speed/10
     @player.move-towards [ board-size.0 * 0.98 * m, -board-size.1 + board-size.1/3 + g * board-size.1/5 ]
+
 
 #
 # Automated Pilot
@@ -35,8 +39,9 @@ export class AutomatedPilot extends Pilot
     super ...
 
   receive-update-data: (x, y, command, time) ->
+
+  update: (Δt, time) ->    # relies on back-refrence from player
     @auto-pilot time
-    return
 
 
 #

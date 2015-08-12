@@ -5,6 +5,7 @@
 { Enemy, BigEnemy } = require \./enemy
 { EnemySpawnEffect }  = require \./enemy-spawn-effect
 
+
 #
 # Wave Pod
 #
@@ -13,31 +14,37 @@ export class WavePod
 
   { board-size } = require \config
 
-  initial-small-enemies = 50
-  initial-large-enemies = 3
+  initial-small-enemies = 10
+  initial-large-enemies = 0
 
   small-enemies-per-wave = 5
   large-enemies-per-wave = 0.3
 
-  downtime   = 1
+  downtime   = 3
   spawn-time = 1
 
   center-drift-speed-factor = 4
 
-  ({ @effects } = {}) ->
+  ({ @effects }) ->
     @phase = 0
     @center = [0 0]
+
+    @wave-number = 0
 
     @downtime-timer = new OneShotTimer downtime
     @spawn-timer    = new OneShotTimer spawn-time
 
-    @wave-gen = do ->*
+    @wave-gen = do ~>*
       small = initial-small-enemies
       large = initial-large-enemies
 
       while true => yield do
+        @wave-number += 1
         small: small += small-enemies-per-wave
         large: floor large += large-enemies-per-wave
+
+  is-downtime: ->
+    @downtime-timer.active
 
   update: (Δt, time, enemies) ->
     @phase += Δt
@@ -52,6 +59,9 @@ export class WavePod
         @new-wave enemies
 
     enemies.map (.set-move-target center)
+
+  downtime-progress: ->
+    @downtime-timer.get-progress!
 
   get-pod-center: (phase) ->
     x =       0        + board-size.0 * 0.8 * Math.sin phase * 2/center-drift-speed-factor

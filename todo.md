@@ -23,6 +23,7 @@
   - Enemies attempt to move back towards the pod
   - Big enemies select nearest player, or player to hurt them most recently
   - Add enemy points-buy system
+  - Work out how to set player score to zero at the right time
 
 - Weapons
   - Go back to impact-based bullet damage

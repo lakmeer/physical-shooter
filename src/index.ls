@@ -6,9 +6,10 @@
 { FrameDriver } = require \./frame-driver
 { Blitter }     = require \./blitter
 { BinSpace }    = require \./bin-space
-{ WavePod }     = require \./wave-pod
+{ Server }      = require \./server
 
 { Player }            = require \./player
+{ WavePod }           = require \./wave-pod
 { Backdrop }          = require \./backdrop
 { CollectableStream } = require \./collectable-stream
 
@@ -16,7 +17,6 @@
 { ScreenShake }       = require \./screen-shake
 { Explosion }         = require \./explosion
 { Wreckage }          = require \./wreckage
-{ PlayerSpawnEffect } = require \./player-spawn-effect
 { BulletImpact }      = require \./bullet-impact
 
 
@@ -24,8 +24,6 @@
 
 { board-size, time-factor } = require \config
 
-
-# Bespoke classes
 
 # Init
 
@@ -46,12 +44,72 @@ player-bin-space = new BinSpace 40, 20, \black
 crowd-bin-space  = new BinSpace 40, 20, \red
 wave-pod         = new WavePod effects: effects
 
+
+# Listen
+
 pilots  = []
 players = []
 enemies = []
 pickups = []
 
+server = new Server { effects }, -> players.push it
+
 main-canvas.install document.body
+
+
+# Wave callback
+
+class Histogram
+
+  { board-size } = require \config
+
+  box-size = board-size.0 / 14
+  gap-size = box-size / 2
+
+  max-score = (m, player) -> if m > player.score then m else player.score
+  max-box-height = board-size.1 / 2
+
+  ->
+    @wave = 0
+
+  set-wave: (n) ->
+    @wave = n
+
+  update: (Δt, time) ->
+
+  draw: (ctx, p, players) ->
+    if not p then return
+    if @wave is 0 then return
+    best-score = players.reduce max-score, 0
+    alpha = if p < 0.8 then 1 else 1 - (p - 0.8) * 5
+    flash = min 1, p * 20
+
+    g = 1 - min 1, p * 5
+    grow = 1 - g*g*g
+
+    ctx.alpha 1 - flash
+    ctx.set-color \white
+    ctx.rect [ -board-size.0, board-size.1 ], [ board-size.0 * 2, board-size.1 * 2 ]
+
+    ctx.alpha alpha
+
+    for player, i in players
+      score = player.score
+      rank = score/best-score
+      height = max-box-height * rank * grow
+      pos  = [ (-2.5 + i) * (box-size + gap-size), -max-box-height/2 + height ]
+      size = [ box-size, height ]
+
+      ctx.set-color player.palette.bullet-color 0
+      ctx.rect pos, size
+
+    ctx.alpha 1
+
+    log p is 1
+
+
+histogram = new Histogram
+
 
 # Homeless functions
 
@@ -216,6 +274,8 @@ play-test-frame = (Δt, time) ->
   # Update players and their bullets
   players := players.filter (player) ->
 
+    player.suppress-fire-if wave-pod.is-downtime!
+
     # Check for collisions on the black plane
     for other in player-bin-space.get-bin-collisions player
       if player.damage.health > 0 and other.collider.intersects player.collider
@@ -256,6 +316,9 @@ play-test-frame = (Δt, time) ->
   # Cull destroyed enemies
   enemies := enemies.filter (.damage.alive)
 
+  histogram.set-wave  wave-pod.wave-number
+  histogram.update Δt, time
+
 
 # Standard renderer
 
@@ -281,60 +344,7 @@ render-frame = (frame) ->
   players.map (.draw-ship main-canvas)
   players.map (.draw-hud main-canvas)
 
-
-
-# Listen
-
-
-# Multiplayer
-
-class Server
-
-  IO = require \socket.io-client
-
-  { LocalPilot, WebsocketPilot } = require \./pilot
-  { Player }            = require \./player
-
-  { board-size } = require \config
-
-  ({ @effects }, @push-player) ->
-
-    @server = IO window.location.hostname + \:9999
-
-    @pilots = []
-
-    # Server callbacks
-    @server.on \connect, @on-connect
-    @server.on \pj, @on-player-joined
-    @server.on \pd, @on-player-disconnected
-    @server.on \p,  @on-player-update
-
-  on-connect: ~>
-    @server.emit \is-master
-
-  on-player-joined: (index) ~>
-    new-player = new Player index
-    @pilots[index] = new WebsocketPilot new-player
-    @effects.push new PlayerSpawnEffect new-player, @push-player
-
-  on-player-disconnected: (index) ~>
-    @pilots[index]?.kill-player!
-    delete @pilots[index]
-
-  on-player-update: (index, ...data) ~>
-    @pilots[index]?.receive-update-data ...data
-
-  add-local-player: (n) ->
-    new-player = new Player n
-    @pilots[n] = new LocalPilot new-player
-    @effects.push new PlayerSpawnEffect new-player, @push-player
-    @server.emit 'master-join', n
-    return new-player
-
-  add-local-player-at-next-open-slot: ->
-    for i from 0 to 5
-      if not @pilots[i]
-        return @add-local-player i
+  histogram.draw main-canvas, wave-pod.downtime-progress!, players
 
 
 #
@@ -344,6 +354,12 @@ class Server
 # Make connection to player relay server
 frame-driver = new FrameDriver
 server = new Server { effects }, -> players.push it
+
+for i from 0 to 5
+  player = server.add-autonomous-player-at-next-open-slot!
+  player.charge = 10000
+  player.score = floor rnd 10000
+  player.set-weapon-level 9
 
 
 # Debug Controls
@@ -365,4 +381,5 @@ document.add-event-listener \keydown, ({ which }:event) ->
 frame-driver.on-frame render-frame
 frame-driver.on-tick play-test-frame
 frame-driver.start!
+
 

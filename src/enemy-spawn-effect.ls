@@ -35,7 +35,7 @@ export class EnemySpawnEffect
     p * random-range max-radius/3, max-radius
 
   draw: (ctx) ->
-    ctx.set-color \darkred
+    ctx.set-color \darkgreen
     ctx.set-line-color \#0f0
     ctx.ctx.global-alpha = 0.6
     ctx.ctx.global-composite-operation = \color-burn
