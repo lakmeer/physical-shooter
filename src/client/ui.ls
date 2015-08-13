@@ -63,6 +63,9 @@ export class UI
       @controls.update Δt, time
       @server.emit \p, ...@controls.consume-pending-input!
 
+  update-charge: (charge) ->
+    @controls.update-charge charge
+
   set-mode: (mode) ->
     @state.mode = mode
 

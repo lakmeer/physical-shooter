@@ -23,19 +23,18 @@ ui     = new UI server
 
 server.on \connect, ->
   delay 1000, ->
+    server.emit \is-client
     driver.start!
     ui.start!
-    server.emit \is-client
 
 server.on \available, (colors) ->
   ui.colors-available colors
 
 server.on \ch, (charge) ->
-  log \charge-amount: charge
+  ui.update-charge charge
 
 server.on \disconnect, ->
   ui.disconnected!
-  #driver.stop!
 
 driver.on-tick (Δt, time) ->
   ui.update Δt, time

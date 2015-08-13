@@ -1,6 +1,6 @@
 
 
-{ id, log } = require \std
+{ id, log, min } = require \std
 
 
 #
@@ -21,6 +21,8 @@ export class Controls
 
   pt = -> it * 100 + \%
 
+  charge-meter-max = 5000
+
   (@dom) ->
     @state =
       x: 0.5
@@ -34,6 +36,7 @@ export class Controls
     @laser-button  = document.get-element-by-id \laser
     @force-button  = document.get-element-by-id \repulsor
     @vortex-button = document.get-element-by-id \vortex
+    @meter         = document.get-element-by-id \charge
 
   is-in-steering-region: ({ pageX }) ->
     pageX > window.inner-width * active-region-ratio
@@ -56,11 +59,18 @@ export class Controls
     | FORCE_OFF  => @force-button.style.background-color = \transparent
     | VORTEX_OFF => @vortex-button.style.background-color = \transparent
 
+  set-meter-height: (charge) ->
+    @meter.style.height = (charge * 100) + \vh
+
   hide: -> @dom.style.display = \none
   show: -> @dom.style.display = \block
 
   update: (Δt, time) ->
     @set-crosshair-pos @state.x, @state.y
+    @set-meter-height @state.charge
+
+  update-charge: (charge) ->
+    @state.charge = min 1, charge/charge-meter-max
 
   set-crosshair-pos: (x, y) ->
     @crosshair.style.left = pt x
