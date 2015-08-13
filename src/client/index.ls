@@ -30,6 +30,9 @@ server.on \connect, ->
 server.on \available, (colors) ->
   ui.colors-available colors
 
+server.on \ch, (charge) ->
+  log \charge-amount: charge
+
 server.on \disconnect, ->
   ui.disconnected!
   #driver.stop!

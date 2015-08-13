@@ -140,6 +140,10 @@ io.on('connection', function (socket) {
     }
   });
 
+  socket.on('ch', function onPlayerChargeUpdate (playerIndex, chargeAmount) {
+    players[playerIndex].socket.emit('ch', chargeAmount);
+  });
+
   socket.on('join', function onJoin (playerIndex) {
     log('Player join:', colors[playerIndex]);
 

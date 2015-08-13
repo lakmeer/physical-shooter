@@ -66,6 +66,6 @@ export class Server
         return @add-autonomous-player i
 
   send-charge-level: (players) ->
-    charges = [ [ index, charge ] for { charge, index } in players ]
-    @server.emit 'ch', charges
+    for { charge, index } in players
+      @server.emit 'ch', index, charge
 

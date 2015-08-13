@@ -15,6 +15,7 @@ export red =
   paintjob: <[ darkred lightblue darkred ]>
   vortex-particle-color: \#600
   ui-color: \red
+  selector-image: \/assets/ship-red.png
 
 export blue =
   stray-color: \blue
@@ -23,6 +24,7 @@ export blue =
   paintjob: <[ darkblue lightblue royalblue ]>
   vortex-particle-color: \#005
   ui-color: \blue
+  selector-image: \/assets/ship-blue.png
 
 export green =
   stray-color: \forestgreen
@@ -31,6 +33,7 @@ export green =
   paintjob: <[ darkgreen lightblue forestgreen ]>
   vortex-particle-color: \#050
   ui-color: \#0f0
+  selector-image: \/assets/ship-green.png
 
 export magenta =
   stray-color: \magenta
@@ -39,6 +42,7 @@ export magenta =
   paintjob: <[ purple lightblue magenta ]>
   vortex-particle-color: \#606
   ui-color: \#f0f
+  selector-image: \/assets/ship-magenta.png
 
 export cyan =
   stray-color: \cyan
@@ -47,6 +51,7 @@ export cyan =
   paintjob: <[ cyan lightblue skyblue ]>
   vortex-particle-color: \#055
   ui-color: \#0ff
+  selector-image: \/assets/ship-cyan.png
 
 export yellow =
   stray-color: \yellow
@@ -55,6 +60,7 @@ export yellow =
   paintjob: <[ yellow lightblue gold ]>
   vortex-particle-color: \#660
   ui-color: \#ff0
+  selector-image: \/assets/ship-yellow.png
 
 export grey =
   stray-color: \white
