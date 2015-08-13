@@ -84,6 +84,7 @@ export class LocalPilot extends Pilot
     player = @player
 
     document.add-event-listener \keydown, ({ which }:event) ->
+      log which
       switch which
       | SPACE  => player.level-up-weapon!
       | TILDE  => player.superpowers!

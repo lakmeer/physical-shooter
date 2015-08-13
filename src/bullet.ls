@@ -206,9 +206,7 @@ export class Laser
     @phase is 2
 
   impact: (target, Δt) ->  # Assume target has compatible component
-    damage-this-tick = @state.power * Δt
-    target.damage.health -= damage-this-tick
-    @state.spent += damage-this-tick
+    target.damage.health -= @state.power * Δt
     @state.hit = true
 
   update: (Δt, pos = @pos) ->
@@ -230,7 +228,7 @@ export class Laser
         @state.age %= @state.life
         @phase += 1
 
-    return @state.alive and @state.age < @state.life and @phase < 3
+    return @state.age < @state.life and @phase < 3
 
   draw: ->
     if @phase is 1

@@ -198,6 +198,7 @@ export class Player
     @score += 1
     @grand-score += 1
     @charge += charge-increase-per-collection
+    log @charge
 
   update: (Δt, time) ->
     if not @alive then return
