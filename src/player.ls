@@ -67,11 +67,11 @@ export class Player
   color-map = \/assets/ship-colormap.svg
   lumin-map = \/assets/ship-luminosity.svg
 
-  laser-charge-cost   = 5000
+  laser-charge-cost   = 3000
   repulsor-charge-cost = 1
   vortex-charge-cost   = 2
 
-  charge-increase-per-collection = 1
+  charge-increase-per-collection = 3
 
   (@index) ->
     @bullets   = []
@@ -84,11 +84,11 @@ export class Player
 
     @score  = 0
     @grand-score = 0
-    @charge = 0
+    @charge = laser-charge-cost
 
     @damage =
-      health: 1000
-      max-hp: 1000
+      health: 2000
+      max-hp: 2000
 
     @alive = yes
 

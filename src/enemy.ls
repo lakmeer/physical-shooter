@@ -31,6 +31,8 @@ export class Enemy
   sprite-size = [ 20, 20 ]
   sprite-offset = sprite-size `v2.scale` 0.5
   move-acc = 5
+  idle-rotate-speed = 1
+  big-idle-rotate-speed = 2
 
   (pos = [0 0]) ->
     @physics = new Physics p:pos, a:[0 -50 - rnd 50], f:0.95
@@ -39,6 +41,7 @@ export class Enemy
     @bullets = []
     @box = @collider
     @palette = Palette.enemy
+    @pod = null
 
     # Damage component
     @damage =
@@ -53,6 +56,9 @@ export class Enemy
     @fire-timer.reset!
     @fire-timer.current = random-range 0, fire-rate
 
+    @phase = 0
+    @rotate-dir = Math.sign Math.random!
+
     @stray-limit = 50
 
   claim-for-player: -> # Not used
@@ -60,11 +66,16 @@ export class Enemy
   update: (Δt, time) ->
     @bullets := @bullets.filter (.update Δt)
 
+    phase-change = if @type is \large then big-idle-rotate-speed else idle-rotate-speed
+    @phase += Δt * phase-change * @rotate-dir
+
     while @bullets.length > @stray-limit
       @bullets.shift!
 
     @fire-timer.update Δt
-    @point-at-target @fire-target
+    #@point-at-target @fire-target
+
+    @rotation = @phase
 
     if @fire-timer.elapsed and @fire-target
       @shoot-at @fire-target
@@ -78,11 +89,14 @@ export class Enemy
       @fire-target = null
 
     # Move toward pod center
-    if @move-target?
-      @physics.set-acc (@move-target `v2.sub` @physics.pos) `v2.scale` move-acc
+    if @pod
+      @physics.set-acc (@pod.center `v2.sub` @physics.pos) `v2.scale` move-acc
 
   assign-target: (target) ->
     @fire-target = target
+
+  assign-pod: (pod) ->
+    @pod = pod
 
   set-move-target: (pos) ~>
     @move-target = pos
@@ -99,6 +113,7 @@ export class Enemy
     return if not @damage.alive
     @bullets.map (.draw ctx)
     ctx.sprite small, @physics.pos, sprite-size, offset: sprite-offset, rotation: @rotation
+    #@collider.draw ctx
 
   shoot-at: (target) ->
     bearing = v2.norm target.physics.pos `v2.sub` @physics.pos
@@ -126,7 +141,7 @@ export class BigEnemy extends Enemy
   border = 10
   aspect = 71 / 100
   fire-rate = 0.05
-  sprite-size = [ 50, 50 * aspect ]
+  sprite-size = [ 50, 50 ]
   bullet-speed = 200
   sprite-offset = sprite-size `v2.scale` 0.5
 
@@ -135,6 +150,7 @@ export class BigEnemy extends Enemy
     super ...
     @type = \large
     @physics.fri = 0.95
+    @collider = new RadialCollider pos.0, pos.1, 25
 
     # Damage component
     @damage =
@@ -154,6 +170,7 @@ export class BigEnemy extends Enemy
     return if not @damage.alive
     @bullets.map (.draw ctx)
     ctx.sprite medium, @physics.pos, sprite-size, offset: sprite-offset, rotation: @rotation
+    #@collider.draw ctx
 
   shoot-at: (target) ->
     jiggle    = [ (random-range -10, 10), (random-range -10, 10) ]

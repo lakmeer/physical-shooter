@@ -17,7 +17,7 @@ export class FrameDriver
 
   RENDER_ON_TICK = no
 
-  (@no-readout) ->
+  (@no-readout = true) ->
     log "FrameDriver::new"
 
     @state =

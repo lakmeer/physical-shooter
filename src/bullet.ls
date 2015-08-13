@@ -140,8 +140,8 @@ export class EnemyBullet extends Bullet
       else
         p = @state.spent/@state.quota
         g = 255 - 155 * p
-        t = 150 * (1 - p)
-        "rgb(#t, #g, #t)"
+        t = 100 * (1 - p)
+        "rgb(#g, #t, #g)"
 
   update: (Δt, time) ->
     super ...
@@ -168,7 +168,7 @@ export class EnemyBullet extends Bullet
       it.circle @physics.pos, @w * 2
       it.ctx.global-alpha = 0.4
       it.set-color \white
-      it.circle @physics.pos, @w * 2 * 0.7
+      it.circle @physics.pos,  @w * 2 * 0.7 * if @alt then 2 else 1
       it.ctx.global-alpha = 1
     else
       if @claimed

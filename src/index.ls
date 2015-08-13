@@ -9,7 +9,7 @@
 { Server }      = require \./server
 
 { Player }            = require \./player
-{ WavePod }           = require \./wave-pod
+{ Wave }              = require \./wave
 { Backdrop }          = require \./backdrop
 { CollectableStream } = require \./collectable-stream
 
@@ -32,7 +32,6 @@ blast-force       = 1000
 blast-force-large = 4000
 vortex-force      = -2000
 repulsor-force    = 200
-start-wave-size   = 10
 effects-limit     = 50
 player-count      = 6
 
@@ -43,7 +42,7 @@ main-canvas      = new Blitter
 enemy-bin-space  = new BinSpace 40, 20, \white
 player-bin-space = new BinSpace 40, 20, \black
 crowd-bin-space  = new BinSpace 40, 20, \red
-wave-pod         = new WavePod effects: effects
+wave             = new Wave effects: effects
 frame-driver     = new FrameDriver
 histogram        = new Histogram
 
@@ -58,21 +57,16 @@ pickups = []
 server = new Server { effects }, -> players.push it
 
 
-# Wave callback
-
-
-# Homeless functions
+# Force functions
 
 emit-force-blast = (force, self, others, Δt) ->
   [ x, y ] = self.physics.pos
-
   effective-distance = 100
 
   blast = (target) ->
     xx  = Math.sign target.physics.pos.0 - x
     yy  = Math.sign target.physics.pos.1 - y
     d   = v2.dist target.physics.pos, self.physics.pos
-
     if d > effective-distance then return
     push = [ force * ids(d) * xx * Δt, force * ids(d) * yy * Δt]
     target.physics.vel = target.physics.vel `v2.add` push
@@ -82,7 +76,6 @@ emit-force-blast = (force, self, others, Δt) ->
     if other.bullets
       for bullet in other.bullets
         blast bullet
-
 
 repulsor = (player, targets, Δt) ->
   [ x, y ] = player.physics.pos
@@ -95,9 +88,7 @@ repulsor = (player, targets, Δt) ->
     xx  = Math.sign target.physics.pos.0 - x
     yy  = Math.sign target.physics.pos.1 - y
     d   = v2.dist target.physics.pos, player.physics.pos
-
     if d > effective-distance then return
-
     push = [ force * ids(d) * xx * Δt, force * ids(d) * yy * Δt]
     target.physics.vel = target.physics.vel `v2.add` push
 
@@ -109,7 +100,6 @@ repulsor = (player, targets, Δt) ->
     if other.bullets
       for bullet in other.bullets
         blast bullet
-
 
 vortex = (player, targets, Δt) ->
   [ x ] = player.physics.pos
@@ -132,8 +122,6 @@ vortex = (player, targets, Δt) ->
       for bullet in other.bullets
         draw bullet, true
 
-
-
 check-destroyed = (enemy, owner, Δt) ->
   if enemy.damage.health <= 0 and enemy.damage.alive
     enemy.damage.alive = no
@@ -143,7 +131,6 @@ check-destroyed = (enemy, owner, Δt) ->
     effects.push new Wreckage enemy.physics.pos, enemy.wreckage-sprite
     force = if enemy.type is \large then blast-force-large else blast-force
     emit-force-blast force, enemy, enemies, Δt
-
 
 de-crowd = (self, others) ->
   max-speed = 0.5
@@ -157,9 +144,6 @@ de-crowd = (self, others) ->
       y = dir.1 * max-speed * (dist/effective-distance)
       self.physics.vel.0 -= x * 1.5 - 0.5 + rnd 1
       self.physics.vel.1 -= y * 1.0 - 0.5 + rnd 1
-      #other.physics.vel.0 += x * 1.5 - 0.5 + rnd 1
-      #other.physics.vel.1 += y * 1.0 - 0.5 + rnd 1
-
 
 
 # Tick functions
@@ -184,7 +168,7 @@ play-test-frame = (Δt, time) ->
   player-bin-space.clear!
 
   # Fill enemies if empty
-  wave-pod.update Δt, time, enemies
+  wave.update Δt, time, enemies
 
   # Populate player bullet bin space
   for player in players
@@ -224,7 +208,7 @@ play-test-frame = (Δt, time) ->
   # Update players and their bullets
   players := players.filter (player) ->
 
-    player.suppress-fire-if wave-pod.is-downtime!
+    player.suppress-fire-if wave.is-downtime!
 
     # Check for collisions on the black plane
     for other in player-bin-space.get-bin-collisions player
@@ -265,7 +249,7 @@ play-test-frame = (Δt, time) ->
   # Cull destroyed enemies
   enemies := enemies.filter (.damage.alive)
 
-  histogram.set-wave  wave-pod.wave-number
+  histogram.set-wave  wave.wave-number
   histogram.update Δt, time
 
   server.send-charge-level players
@@ -281,12 +265,15 @@ render-frame = (frame) ->
 
   effects.draw main-canvas
 
+  # Debug drawing
   #enemy-bin-space.draw main-canvas
   #player-bin-space.draw main-canvas
   #crowd-bin-space.draw main-canvas
+  #wave.draw main-canvas
 
   pickups.map (.draw main-canvas)
   enemies.map (.draw main-canvas)
+
 
   # This order is important
   players.map (.draw-projectiles main-canvas)
@@ -295,7 +282,7 @@ render-frame = (frame) ->
   players.map (.draw-ship main-canvas)
   #players.map (.draw-hud main-canvas)
 
-  histogram.draw main-canvas, wave-pod.downtime-progress!, players
+  histogram.draw main-canvas, wave.downtime-progress!, players
 
 
 #

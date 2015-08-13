@@ -44,7 +44,7 @@ export class Backdrop
 
   draw-star: ({ x, y, r }, ctx) ->
     ctx.fill-style = \white
-    ctx.global-alpha = 0.7
+    ctx.global-alpha = 0.5
     ctx.begin-path!
     ctx.arc x + @offset.0, y + @offset.1, r/scale-factor, 0, tau
     ctx.close-path!
@@ -55,7 +55,7 @@ export class Backdrop
 
     offset = @scroll % bgh
 
-    ctx.ctx.global-alpha = 1
+    ctx.ctx.global-alpha = 0.6
     ctx.ctx.draw-image bg, 0 + @offset.0, offset + @offset.1,       screen-size.0, bgh
     ctx.ctx.draw-image bg, 0 + @offset.0, offset + @offset.1 - bgh, screen-size.0, bgh
     ctx.ctx.global-alpha = 1

@@ -14,13 +14,13 @@ export class EnemySpawnEffect
 
   { board-size } = require \config
 
-  max-offset = 50
+  max-offset = 25
   max-radius = 150
 
-  simultaneous-circles = 4
+  simultaneous-circles = 2
 
   (@x, @y) ->
-    @timer = new Timer 2
+    @timer = new Timer 0.7
     @timer.start!
     @flash = 1
 
@@ -35,10 +35,10 @@ export class EnemySpawnEffect
     p * random-range max-radius/3, max-radius
 
   draw: (ctx) ->
-    ctx.set-color \darkgreen
+    ctx.set-color \#303
     ctx.set-line-color \#0f0
-    ctx.ctx.global-alpha = 0.6
-    ctx.ctx.global-composite-operation = \color-burn
+    ctx.ctx.global-alpha = 0.3
+    ctx.ctx.global-composite-operation = \color-dodge
 
     prog = @timer.get-progress!
 
@@ -47,7 +47,7 @@ export class EnemySpawnEffect
     for i from 0 to simultaneous-circles
       offset = @random-offset p
       radius = @random-radius p
-      ctx.stroke-circle offset, radius
+      #ctx.stroke-circle offset, radius
       ctx.circle offset, radius
 
     ctx.ctx.global-alpha = 1

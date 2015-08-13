@@ -27,7 +27,6 @@ export class BinSpace
     ctx.ctx.global-alpha = 1
 
   get-bin: (x, y) ->
-    #log \get, x, y
     if x < 0 or x >= @cols
       []
     else if y < 0 or y >= @rows
