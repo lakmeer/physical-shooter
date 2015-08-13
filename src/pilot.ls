@@ -1,8 +1,10 @@
 
 
-{ id, log, pi } = require \std
+{ id, log, pi, delay } = require \std
 
 { board-size } = require \config
+
+{ Player } = require \./player
 
 
 #
@@ -14,12 +16,22 @@
 export class Pilot
 
   speed = 2
+  respawn-time = 2000
 
-  (@player) ->
-    @bind-inputs!
+  (@index, @on-player-spawn) ->
+    @spawn-player!
 
   bind-inputs: ->
-  kill-player: -> @player.kill!
+
+  spawn-player: ~>
+    @player = new Player @index
+    @player.on-killed ~>
+      delay respawn-time, @spawn-player
+    @on-player-spawn @player
+    @bind-inputs!
+
+  kill-player: ->
+    @player.kill!
 
   auto-pilot: (time, i = @player.index) ->
     m = Math.sin time + i * pi/3 * speed/10
@@ -42,6 +54,10 @@ export class AutomatedPilot extends Pilot
 
   update: (Δt, time) ->    # relies on back-refrence from player
     @auto-pilot time
+
+  spawn-player: ~>
+    super ...
+    @player.auto-pilot = @pilots[n]
 
 
 #
@@ -108,6 +124,7 @@ export class WebsocketPilot extends Pilot
     super ...
 
   receive-update-data: (x, y, command, time) ->
+    if not @player? then return
     @player.move-towards [
       -board-size.0 + board-size.0 * 2 * x
       board-size.1 - board-size.1 * 2 * y

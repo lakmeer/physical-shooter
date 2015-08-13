@@ -36,19 +36,23 @@ export class Selector
       selection: null
       phase: 0
 
-    # Prepare DOM
-    for let child, i in @dom.children
-      child.append-child @ships[i].sprite
-      child.append-child @ships[i].greyed
-      child.add-event-listener \touchstart, @save-selection i
+  show: ->
+    @prepare!
+    @dom.style.display = \block
 
-  hide: -> @dom.style.display = \none
-  show: -> @dom.style.display = \block
+  hide: ->
+    @dom.style.display = \none
 
   save-selection: (index) -> ~>
     selection = @ships[index]
     if selection.free
       @state.selection = index
+
+  prepare: ->
+    for let child, i in @dom.children
+      child.append-child @ships[i].sprite
+      child.append-child @ships[i].greyed
+      child.add-event-listener \touchstart, @save-selection i
 
   get-selection: ->
     if @state.selection? then @ships[that] else false
@@ -59,7 +63,7 @@ export class Selector
       @ships[option.index].free = option.free
 
   update: (Δt) ->
-    @state.phase += Δt / 3
+    #@state.phase += Δt / 3
 
     for let child, i in @dom.children
       @set-availability-state child, @ships[i]

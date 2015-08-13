@@ -1,6 +1,7 @@
 
 - Phone Interface
-  - Debug lack of graphics on iPhone
+    - Debug lack of graphics on iPhone
+  - Implement pre-compoes version of ship graphics
 
 - Engine
   - Move to proper damage module
@@ -8,18 +9,16 @@
 
 - Game flow
   - Add title screen when no players
-  - Allow respawning
+    - Allow respawning
+  - Send charge value to client interface
+  - Cap bar at 5000
 
 - Wave Pod
-  - Points-buy system for waves
-  - Big enemies select nearest player, or player to hurt them most recently
-  - Work out how to set player score to zero at the right time
-
-- Weapons
-  - Floating weapon pickups
-
-- Force Weapons
-  - Change laser power during falloff phase
+  - Switch enemy graphics
+  - Add multi-pod waves
+  - Enemies to rotate idly instead of face player
+  - Assign weapon upgrade at end of wave
+  - Reset player health at end of wave
 
 - Optional
   - Add enemy luminance mapping and colored difficulty ranking

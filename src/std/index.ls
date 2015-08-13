@@ -53,6 +53,11 @@ export ids = -> if it is 0 then 0 else 1 / it*it
 
 export idd = -> if it is 0 then 0 else 1 / it
 
+export base64 = (buffer, output = "") ->
+  bytes = new Uint8Array( buffer )
+  for i from 0 to bytes.byteLength => output += String.fromCharCode bytes[i]
+  window.btoa output
+
 
 # Physics processors
 

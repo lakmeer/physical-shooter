@@ -39,7 +39,6 @@ export class WavePod
       large = initial-large-enemies
 
       while true => yield do
-        @wave-number += 1
         small: small += small-enemies-per-wave
         large: floor large += large-enemies-per-wave
 
@@ -56,7 +55,7 @@ export class WavePod
       @downtime-timer.update Δt
 
       if @downtime-timer.elapsed
-        @new-wave enemies
+        @new-wave enemies, @wave-number + 1
 
     enemies.map (.set-move-target center)
 
@@ -68,9 +67,10 @@ export class WavePod
     y = board-size.1/3 + board-size.1 * 0.4 * Math.cos phase * 1/center-drift-speed-factor
     [ x, y ]
 
-  new-wave: (enemies) ->
+  new-wave: (enemies, wave) ->
     @spawn-timer.begin!
     @phase = random-range 0, tau
+    @wave-number = wave
 
     { small, large } = @wave-gen.next!value
     @center = @get-pod-center @phase

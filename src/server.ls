@@ -34,9 +34,7 @@ export class Server
     @server.emit \is-master
 
   on-player-joined: (index) ~>
-    new-player = new Player index
-    @pilots[index] = new WebsocketPilot new-player
-    @effects.push new PlayerSpawnEffect new-player, @push-player
+    @new-pilot WebsocketPilot, index
 
   on-player-disconnected: (index) ~>
     @pilots[index]?.kill-player!
@@ -45,20 +43,17 @@ export class Server
   on-player-update: (index, ...data) ~>
     @pilots[index]?.receive-update-data ...data
 
+  new-pilot: (PilotType, index) ->
+    @pilots[index] = new PilotType index, (player) ~>
+      @effects.push new PlayerSpawnEffect player, @push-player
+
   add-local-player: (n) ->
-    new-player = new Player n
-    @pilots[n] = new LocalPilot new-player
-    @effects.push new PlayerSpawnEffect new-player, @push-player
+    @new-pilot LocalPilot, n
     @server.emit 'master-join', n
-    return new-player
 
   add-autonomous-player: (n) ->
-    new-player = new Player n
-    @pilots[n] = new AutomatedPilot new-player
-    @effects.push new PlayerSpawnEffect new-player, @push-player
+    @new-pilot AutomatedPilot, n
     @server.emit 'master-join', n
-    new-player.auto-pilot = @pilots[n]
-    return new-player
 
   add-local-player-at-next-open-slot: ->
     for i from 0 to 5
@@ -70,4 +65,7 @@ export class Server
       if not @pilots[i]
         return @add-autonomous-player i
 
+  send-charge-level: (players) ->
+    charges = [ [ index, charge ] for { charge, index } in players ]
+    @server.emit 'ch', charges
 

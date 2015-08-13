@@ -22,7 +22,7 @@ export class Explosion
 
     * size:  1
       life: -> rnd 0.5
-      color: -> \black
+      color: -> \white
       limit: 2
       speed: 2000
       damp: 0.9

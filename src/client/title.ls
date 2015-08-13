@@ -21,8 +21,8 @@ export class Title
       @state.ready = yes
 
   update: (Δt, time) ->
-    if reveal-delay <= time <= reveal-time
-      p = (time - reveal-delay) / reveal-time * 2
+    if reveal-delay <= time <= reveal-time + reveal-delay
+      p = (time - reveal-delay) / reveal-time
       t = 1 - p
       @title-text.style.display = \block
       @title-text.style.opacity = p * p
@@ -32,8 +32,7 @@ export class Title
     else
       @title-text.style.opacity = 1
       @title-text.style.margin-top = 0
-      alpha = 0.5 + 0.25 * Math.sin time * 10
-      @tap-text.style.opacity = alpha
+      @tap-text.style.opacity = 0.5 + 0.25 * Math.sin time * 10
 
   show: -> @dom.style.display = \block
   hide: -> @dom.style.display = \none

@@ -19,10 +19,6 @@ export class Controls
 
   active-region-ratio = 0.4
 
-  w = window.inner-width
-  h = window.inner-height
-  a = active-region-ratio
-
   pt = -> it * 100 + \%
 
   (@dom) ->
@@ -82,6 +78,10 @@ export class Controls
     [ @state.x, @state.y, command ]
 
   on-touchstart: (event) ~>
+    w = window.inner-width
+    h = window.inner-height
+    a = active-region-ratio
+
     for touch in event.touches
       if @is-in-steering-region touch
         @state.x = (touch.pageX - w * a) / (window.inner-width * (1 - a))
@@ -93,6 +93,10 @@ export class Controls
     return false
 
   on-touchmove: (event) ~>
+    w = window.inner-width
+    h = window.inner-height
+    a = active-region-ratio
+
     for touch in event.touches
       if @is-in-steering-region touch
         @state.x = (touch.pageX - w * a) / (window.inner-width * (1 - a))
@@ -113,7 +117,7 @@ export class Controls
   bind-inputs: ->
     document.add-event-listener 'touchstart', @on-touchstart
     document.add-event-listener 'touchend',   @on-touchend
-    document.add-event-listener 'touchleave',   @on-touchend
+    document.add-event-listener 'touchleave', @on-touchend
     document.add-event-listener 'touchmove',  @on-touchmove
 
   release-inputs: ->

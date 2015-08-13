@@ -54,6 +54,8 @@ export class Player
   sprite-size   = [ 30, 30 ]
   sprite-offset = sprite-size `v2.scale` 0.5
 
+  respawn-time = 2
+
   palette-index-assignment = <[ red blue green magenta cyan yellow ]>
 
   vortex-particle-width = 5
@@ -81,6 +83,7 @@ export class Player
     @collider  = new RadialCollider 0, 0, 10
 
     @score  = 0
+    @grand-score = 0
     @charge = 0
 
     @damage =
@@ -89,6 +92,7 @@ export class Player
 
     @alive = yes
 
+    @respawn-timer = new Timer respawn-time
     @laser-timer  = new Timer laser-rate
     @bullet-timer = new RecurringTimer bullet-rate
 
@@ -103,6 +107,14 @@ export class Player
     @forcefield-phase = 0
     @destination-pos = [ @physics.pos.0, @physics.pos.1 ]
     @set-weapon-level 0
+
+    # Respawning and death
+    @death-callback = id
+    @death-callback-pending = yes
+
+  process-wave-increase: (wave) ->
+    @score = 0
+    @level-up-weapon!
 
   superpowers: ->
     @charge = 1000000000
@@ -120,10 +132,7 @@ export class Player
   kill: ->
     @alive = false
     @bullets = []
-
-  unkill: ->
-    @alive = true
-    @damage.health = @damage.max-hp
+    @death-callback? this
 
   derive-bullet-color: (p) ->
     @palette.bullet-color p
@@ -170,7 +179,7 @@ export class Player
     ctx.ctx.global-alpha = 1
 
   draw-hud: (ctx) ->
-    return
+    #return
     charge-offset = [ 0 50 ]
     score-offset =  [ 0 100 ]
     ctx.set-color @palette.bullet-color 0
@@ -187,18 +196,22 @@ export class Player
   collect: (item) ->
     item.collected = yes
     @score += 1
+    @grand-score += 1
     @charge += charge-increase-per-collection
 
   update: (Δt, time) ->
     if not @alive then return
 
-    pos = @physics.pos
-
     # Update projectiles
     @bullets = @bullets.filter (.update Δt)
     @bullet-timer.update Δt
+    if @bullet-timer.elapsed then @shoot!
 
     # Update special weapons
+    @forcefield-phase += Δt * 200
+
+    # Update laser
+    pos = @physics.pos
     @lasers = @lasers.filter (.update Δt, pos)
     if @lasers.length is 0 then @deactivate-laser!
 
@@ -207,22 +220,30 @@ export class Player
         @state.laser-active = yes
         @state.laser-charging = no
 
-    @forcefield-phase += Δt * 200
-
-    if @bullet-timer.elapsed => @shoot!
-
     # Move towards dest
+    @update-position Δt
+    @spend-charge-on-active-weapons Δt
+
+    # Autotpilot
+    if @auto-pilot?
+      @auto-pilot.update Δt, time
+      @damage.health = @damage.max-health
+
+    # Detect dealth
+    if @damage.health <= 0
+      @alive = no
+
+
+  update-position: (Δt) ->
     diff = @destination-pos `v2.sub` @physics.pos
     dist = v2.hyp diff
     dest =
-      if dist < max-speed * Δt
-        @destination-pos
-      else
-        @physics.pos `v2.add` ((v2.norm diff) `v2.scale` (max-speed * Δt))
-
+      if dist < max-speed * Δt then @destination-pos
+      else @physics.pos `v2.add` ((v2.norm diff) `v2.scale` (max-speed * Δt))
     @physics.move-to dest
     @collider.move-to dest
 
+  spend-charge-on-active-weapons: (Δt) ->
     if @state.forcefield-active
       @charge -= repulsor-charge-cost
 
@@ -234,9 +255,9 @@ export class Player
       @deactivate-vortex!
       @deactivate-forcefield!
 
-    if @auto-pilot?
-      @auto-pilot.update Δt, time
-      @damage.health = @damage.max-health
+  on-killed: (λ) ->
+    @death-callback = λ
+    @death-callback-pending = yes
 
   is-laser-busy: ->
     @state.laser-active or @state.laser-charging

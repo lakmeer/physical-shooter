@@ -37,3 +37,15 @@ server.on \disconnect, ->
 driver.on-tick (Δt, time) ->
   ui.update Δt, time
 
+
+#
+# Init
+#
+
+s = -> window.scroll-to 0, 1
+
+window.add-event-listener \load, s
+window.add-event-listener \orientationchange, s
+
+delay 1000, s
+

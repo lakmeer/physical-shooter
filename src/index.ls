@@ -13,11 +13,12 @@
 { Backdrop }          = require \./backdrop
 { CollectableStream } = require \./collectable-stream
 
-{ EffectsDriver }     = require \./effects-driver
-{ ScreenShake }       = require \./screen-shake
-{ Explosion }         = require \./explosion
-{ Wreckage }          = require \./wreckage
-{ BulletImpact }      = require \./bullet-impact
+{ EffectsDriver } = require \./effects-driver
+{ ScreenShake }   = require \./screen-shake
+{ Explosion }     = require \./explosion
+{ Wreckage }      = require \./wreckage
+{ BulletImpact }  = require \./bullet-impact
+{ Histogram }     = require \./histogram
 
 
 # Config
@@ -43,9 +44,11 @@ enemy-bin-space  = new BinSpace 40, 20, \white
 player-bin-space = new BinSpace 40, 20, \black
 crowd-bin-space  = new BinSpace 40, 20, \red
 wave-pod         = new WavePod effects: effects
+frame-driver     = new FrameDriver
+histogram        = new Histogram
 
 
-# Listen
+# State
 
 pilots  = []
 players = []
@@ -54,61 +57,8 @@ pickups = []
 
 server = new Server { effects }, -> players.push it
 
-main-canvas.install document.body
-
 
 # Wave callback
-
-class Histogram
-
-  { board-size } = require \config
-
-  box-size = board-size.0 / 14
-  gap-size = box-size / 2
-
-  max-score = (m, player) -> if m > player.score then m else player.score
-  max-box-height = board-size.1 / 2
-
-  ->
-    @wave = 0
-
-  set-wave: (n) ->
-    @wave = n
-
-  update: (Δt, time) ->
-
-  draw: (ctx, p, players) ->
-    if not p then return
-    if @wave is 0 then return
-    best-score = players.reduce max-score, 0
-    alpha = if p < 0.8 then 1 else 1 - (p - 0.8) * 5
-    flash = min 1, p * 20
-
-    g = 1 - min 1, p * 5
-    grow = 1 - g*g*g
-
-    ctx.alpha 1 - flash
-    ctx.set-color \white
-    ctx.rect [ -board-size.0, board-size.1 ], [ board-size.0 * 2, board-size.1 * 2 ]
-
-    ctx.alpha alpha
-
-    for player, i in players
-      score = player.score
-      rank = score/best-score
-      height = max-box-height * rank * grow
-      pos  = [ (-2.5 + i) * (box-size + gap-size), -max-box-height/2 + height ]
-      size = [ box-size, height ]
-
-      ctx.set-color player.palette.bullet-color 0
-      ctx.rect pos, size
-
-    ctx.alpha 1
-
-    log p is 1
-
-
-histogram = new Histogram
 
 
 # Homeless functions
@@ -281,6 +231,7 @@ play-test-frame = (Δt, time) ->
       if player.damage.health > 0 and other.collider.intersects player.collider
         other.impact? player, Δt
 
+    # Update projectiles
     if player.state.forcefield-active
       repulsor player, enemies, Δt
       shaker.trigger 1, 0.1
@@ -289,28 +240,26 @@ play-test-frame = (Δt, time) ->
       vortex player, enemies, Δt
       shaker.trigger 2, 0.1
 
-    if player.damage.health <= 0 and player.alive
-      player.kill!
-      for enemy in enemies
-        if enemy.fire-target is player
-          enemy.fire-target = null
-
     for laser in player.lasers
       shaker.trigger 10 * laser.strength!, 0.1
-
       for enemy in enemies
         if laser.collider.intersects enemy.collider
           laser.impact enemy, Δt
           enemy.last-hit = player
           check-destroyed enemy, player, Δt
 
-    if not player.alive
+    # Check for death
+    if player.damage.health <= 0 and player.alive
+      player.kill!
       effects.push new Explosion player.physics.pos, 3
       player.cleanup!
       shaker.trigger 10, 1
-      return false
 
-    return true
+      for enemy in enemies
+        if enemy.fire-target is player
+          enemy.fire-target = null
+
+    return player.alive
 
 
   # Cull destroyed enemies
@@ -318,6 +267,8 @@ play-test-frame = (Δt, time) ->
 
   histogram.set-wave  wave-pod.wave-number
   histogram.update Δt, time
+
+  server.send-charge-level players
 
 
 # Standard renderer
@@ -342,7 +293,7 @@ render-frame = (frame) ->
   players.map (.draw-special-effects main-canvas)
   players.map (.draw-lasers main-canvas)
   players.map (.draw-ship main-canvas)
-  players.map (.draw-hud main-canvas)
+  #players.map (.draw-hud main-canvas)
 
   histogram.draw main-canvas, wave-pod.downtime-progress!, players
 
@@ -352,14 +303,13 @@ render-frame = (frame) ->
 #
 
 # Make connection to player relay server
-frame-driver = new FrameDriver
-server = new Server { effects }, -> players.push it
 
-for i from 0 to 5
-  player = server.add-autonomous-player-at-next-open-slot!
-  player.charge = 10000
-  player.score = floor rnd 10000
-  player.set-weapon-level 9
+if false
+  for i from 0 to 5
+    player = server.add-autonomous-player-at-next-open-slot!
+    player.charge = 10000
+    player.score = floor rnd 10000
+    player.set-weapon-level 9
 
 
 # Debug Controls
@@ -381,5 +331,8 @@ document.add-event-listener \keydown, ({ which }:event) ->
 frame-driver.on-frame render-frame
 frame-driver.on-tick play-test-frame
 frame-driver.start!
+
+# Init - assign
+main-canvas.install document.body
 
 

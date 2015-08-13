@@ -123,6 +123,7 @@ export class EnemyBullet extends Bullet
     @state.hit = true
 
   impact: (target) ->
+    if @stray then return
     target.damage.health -= @state.power
     @state.hit = true
 

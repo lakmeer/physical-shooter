@@ -72,6 +72,7 @@ export palette-sprite = (color-src, lumin-src, palette, size) ->
     color-loaded: no
     lumin-loaded: no
 
+  output  = empty-sprite size, size
   diffuse = empty-sprite size, size
   overlay = empty-sprite size, size
 
@@ -93,7 +94,6 @@ export palette-sprite = (color-src, lumin-src, palette, size) ->
     output.draw diffuse
     output.luminosity overlay
 
-  output = empty-sprite size, size
   output.greyscale = -> output.draw overlay
 
   return output

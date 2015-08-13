@@ -30,16 +30,16 @@ export class UI
       ship: null
 
   start: ->
-    @set-mode MODE_CAPTURE_INPUT
+    @set-mode MODE_TITLE_SCREEN
 
     # Debug
-    @controls.set-ui-color \red
+    #@controls.set-ui-color \red
 
   colors-available: (colors) ->
     @selector.set-available-colors colors
 
-  set-bg-color: (color) ->
-    @dom.style.background-color = color
+  #set-bg-color: (color) ->
+    #@dom.style.background-color = color
 
   submit-selection: (selection) ->
     @server.emit \join, selection.index
@@ -55,8 +55,8 @@ export class UI
       @selector.update Δt, time
       if @selector.get-selection!
         @submit-selection that
-        @controls.set-ui-color = that.palette.ui-color
-        @set-bg-color that.palette.bullet-color 0
+        @controls.set-ui-color that.palette.ui-color
+        #@set-ui-color that.palette.bullet-color 0
         @set-mode MODE_CAPTURE_INPUT
 
     | MODE_CAPTURE_INPUT =>
