@@ -3,7 +3,7 @@
 Experimental little shmup where everything is done with physical simulation.
 Later evolved into 'Ghost Squadron', a 1-6 player phone-controlled party game exhibited at our office opening party.
 
-### GLP3
+### GPL3
 
    This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
