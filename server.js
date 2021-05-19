@@ -119,7 +119,7 @@ io.on('connection', function (socket) {
   var myPlayerIndex = 0;
 
   // Check for errors emitted by the socket engine
-  socket.on('error',  log);
+  socket.on('error', log);
 
   // Deterimine role
   socket.on('is-master', passSocket(socket, becomeMaster));
@@ -141,7 +141,9 @@ io.on('connection', function (socket) {
   });
 
   socket.on('ch', function onPlayerChargeUpdate (playerIndex, chargeAmount) {
-    players[playerIndex].socket.emit('ch', chargeAmount);
+    if (players[playerIndex].socket) {
+      players[playerIndex].socket.emit('ch', chargeAmount);
+    }
   });
 
   socket.on('join', function onJoin (playerIndex) {

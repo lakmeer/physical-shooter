@@ -14,11 +14,9 @@ export class Title
     @tap-text   = document.get-element-by-id \tap-text
     @title-text = document.get-element-by-id \title-text
 
-    @state =
-      ready: no
+    @state = ready: no
 
-    @dom.add-event-listener \touchstart, ~>
-      @state.ready = yes
+    @dom.add-event-listener \touchstart, ~> @state.ready = yes
 
   update: (Δt, time) ->
     if reveal-delay <= time <= reveal-time + reveal-delay
